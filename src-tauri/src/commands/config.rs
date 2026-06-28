@@ -7,7 +7,7 @@ use aes_gcm::{
 use argon2::{Algorithm, Argon2, Params, Version};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use chrono::Utc;
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use zeroize::Zeroizing;
@@ -139,8 +139,8 @@ pub async fn cmd_export_config(
 
     let mut salt = [0u8; 16];
     let mut nonce_bytes = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut salt);
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
+    rand::rng().fill_bytes(&mut salt);
+    rand::rng().fill_bytes(&mut nonce_bytes);
 
     let key_bytes = derive_key(passphrase.as_bytes(), &salt);
     let key = Key::<Aes256Gcm>::from_slice(&key_bytes);

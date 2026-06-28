@@ -96,7 +96,7 @@ pub fn retrieve(vault_ref: &str) -> Result<VaultSecret, AppError> {
         CredReadW(
             windows::core::PCWSTR(target_w.as_ptr()),
             CRED_TYPE_GENERIC,
-            0,
+            Some(0),
             &mut ptr,
         )
         .map_err(|e| AppError::Vault(e.to_string()))?;
@@ -128,7 +128,7 @@ pub fn delete(vault_ref: &str) -> Result<(), AppError> {
         CredDeleteW(
             windows::core::PCWSTR(target_w.as_ptr()),
             CRED_TYPE_GENERIC,
-            0,
+            Some(0),
         )
     }
     .map_err(|e| AppError::Vault(e.to_string()))?;

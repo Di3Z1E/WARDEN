@@ -17,10 +17,10 @@ jobs:
       contents: write   # needed to create the GitHub Release
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ── Node / frontend ──────────────────────────────────────────────────────
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -43,7 +43,7 @@ jobs:
       # Uploads warden.exe, the MSI, and the NSIS installer to a new GitHub Release.
       # Pre-release flag is set automatically when the tag contains a hyphen (e.g. v1.0.0-beta.1).
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: WARDEN ${{ github.ref_name }}
           draft: false

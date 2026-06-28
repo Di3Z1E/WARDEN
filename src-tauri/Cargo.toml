@@ -27,7 +27,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 
 # Database
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 
 # SSH / SFTP
 russh = "0.44"
@@ -52,8 +52,8 @@ zeroize = { version = "1", features = ["derive", "serde"] }
 
 # Crypto / encoding
 base64 = "0.22"
-rand = "0.8"
-sha2 = "0.10"
+rand = "0.10"
+sha2 = "0.11"
 hex = "0.4"
 aes-gcm = "0.10"
 
@@ -65,7 +65,7 @@ log = "0.4"
 env_logger = "0.11"
 
 # Networking (WoL / IPMI raw sockets)
-socket2 = "0.5"
+socket2 = "0.6"
 
 # HTTP client (Redfish / vSphere REST)
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -90,7 +90,7 @@ der = "0.7"
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_Security_Credentials",
