@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod certs;
+pub mod monitoring;
 pub mod config;
 pub mod iam;
 pub mod inventory;

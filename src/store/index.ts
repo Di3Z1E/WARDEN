@@ -106,6 +106,7 @@ export type ModalType =
   | "scripts"
   | "bulk-exec"
   | "cert-monitor"
+  | "monitoring"
   | null;
 
 interface UiState {

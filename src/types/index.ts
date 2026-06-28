@@ -156,6 +156,33 @@ export interface CertInfo {
   sans: string[];
 }
 
+// ── Monitoring ────────────────────────────────────────────────────────────────
+
+export interface MonitorEvent {
+  id: string;
+  machine_id: string;
+  ts: string;
+  state: "up" | "down";
+  latency_ms: number | null;
+}
+
+export interface MonitorRule {
+  machine_id: string;
+  check_interval_secs: number;
+  enabled: boolean;
+  notify_desktop: boolean;
+  created_at: string;
+}
+
+export interface LivenessResult {
+  machine_id: string;
+  is_up: boolean;
+  latency_ms: number | null;
+  checked_at: string;
+  host: string;
+  port: number;
+}
+
 // ── API response wrapper ──────────────────────────────────────────────────────
 
 export interface CmdError {

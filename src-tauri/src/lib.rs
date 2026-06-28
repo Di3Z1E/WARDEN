@@ -4,6 +4,7 @@ pub mod db;
 pub mod error;
 pub mod iam;
 pub mod inventory;
+pub mod monitoring;
 pub mod power;
 pub mod protocols;
 pub mod scripts;
@@ -37,6 +38,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let data_dir = app_data_dir(app.handle());
             std::fs::create_dir_all(&data_dir)?;
@@ -129,6 +131,13 @@ pub fn run() {
             commands::certs::cmd_upsert_cert_monitor,
             commands::certs::cmd_delete_cert_monitor,
             commands::certs::cmd_refresh_cert_monitor,
+            // Liveness monitoring & Ansible export
+            commands::monitoring::cmd_check_machine_liveness,
+            commands::monitoring::cmd_get_liveness_history,
+            commands::monitoring::cmd_get_all_liveness_statuses,
+            commands::monitoring::cmd_upsert_monitor_rule,
+            commands::monitoring::cmd_get_monitor_rule,
+            commands::monitoring::cmd_export_ansible_inventory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running WARDEN");

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Shield, Search, Users, BookOpen, LogOut, Terminal as TerminalIcon, DatabaseBackup, Info, Palette, Code2, ShieldCheck } from "lucide-react";
+import { Shield, Search, Users, BookOpen, LogOut, Terminal as TerminalIcon, DatabaseBackup, Info, Palette, Code2, ShieldCheck, Activity } from "lucide-react";
 import clsx from "clsx";
 import { useAuthStore, useSessionStore, useUiStore, useThemeStore, THEMES } from "../../store";
 import { logout } from "../../lib/tauri";
@@ -164,6 +164,17 @@ export default function Header() {
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               Certs
+            </button>
+          )}
+
+          {(user.role === "Admin" || user.role === "Operator") && (
+            <button
+              onClick={() => openModal("monitoring")}
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-700 text-muted hover:text-gray-200 transition-colors text-xs"
+              title="Monitoring"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Monitor
             </button>
           )}
 

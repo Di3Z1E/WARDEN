@@ -335,6 +335,32 @@ export const deleteCertMonitor = (id: string) =>
 export const refreshCertMonitor = (id: string) =>
   invoke<CertInfo>("cmd_refresh_cert_monitor", { id });
 
+// ── Monitoring / liveness ─────────────────────────────────────────────────────
+
+import type { LivenessResult, MonitorEvent, MonitorRule } from "../types";
+
+export const checkMachineLiveness = (machineId: string) =>
+  invoke<LivenessResult>("cmd_check_machine_liveness", { machineId });
+
+export const getLivenessHistory = (machineId: string, limit?: number) =>
+  invoke<MonitorEvent[]>("cmd_get_liveness_history", { machineId, limit: limit ?? null });
+
+export const getAllLivenessStatuses = () =>
+  invoke<MonitorEvent[]>("cmd_get_all_liveness_statuses");
+
+export const upsertMonitorRule = (input: {
+  machine_id: string;
+  enabled: boolean;
+  notify_desktop: boolean;
+  interval_secs?: number;
+}) => invoke<MonitorRule>("cmd_upsert_monitor_rule", { input });
+
+export const getMonitorRule = (machineId: string) =>
+  invoke<MonitorRule | null>("cmd_get_monitor_rule", { machineId });
+
+export const exportAnsibleInventory = () =>
+  invoke<string>("cmd_export_ansible_inventory");
+
 // ── Network / diagnostics ─────────────────────────────────────────────────────
 
 export const verifyOsAndResetPassword = (
