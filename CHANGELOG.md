@@ -8,15 +8,61 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Planned for v0.3
-- Parallel script runner across multiple hosts
-- Machine group bulk actions
-- Ansible inventory export (YAML)
-
 ### Planned for v0.4
 - ICMP / TCP liveness monitoring per machine
 - Uptime sparklines on Dashboard
 - Desktop notification alerts
+- Ansible inventory export (YAML)
+
+---
+
+## [0.3.0] — 2026-06-28
+
+### Added
+
+#### Script Library
+- **Script CRUD** — create, edit, delete PowerShell / Bash / Python scripts stored in SQLite
+- **Live streaming runner** — execute a script concurrently across any set of inventory machines via SSH exec channel; per-machine output streamed in real time via Tauri events (`script:output:<runId>:<machineId>`)
+- **Run history** — every execution is persisted with stdout, stderr, and exit code per machine; frontend saves output chunks via `cmd_save_run_output` (avoids holding DB lock across async SSH calls)
+- Script Library modal accessible to Admin and Operator roles (Code2 icon in header)
+
+#### Bulk Command Execution
+- **Ad-hoc SSH exec** — enter a shell command, pick any SSH-capable machines (WindowsServer, WindowsClient, Linux, GenericSsh), run concurrently
+- Per-machine live output grid with state icons (pending / running / ok / error / timeout)
+- Expandable per-machine output panel; Enter key triggers execution
+- Streamed via `bulk:output:<jobId>:<machineId>` / `bulk:done:<jobId>` Tauri events
+
+#### Certificate Monitor
+- **Quick check** — one-off TLS certificate inspection by hostname + port; shows subject, issuer, expiry date, SANs, days remaining
+- **Persisted monitors** — add endpoints to a watch list; refresh on demand; last-checked metadata stored in DB
+- `DaysBadge` color indicator: green (>30 d), yellow (≤30 d), red (≤7 d)
+- TOFU TLS verifier (`AcceptAny`) — reads cert metadata without validating chain (same pattern as RDP)
+- DER time parsing handles both UTCTime (tag `0x17`) and GeneralizedTime (tag `0x18`) without extra feature flags
+
+#### Database Migration System
+- Versioned migration runner — applies only migrations with `version > current` against `schema_version` in settings table
+- Migration 1: baseline schema (all existing tables)
+- Migration 2: new tables — `scripts`, `script_runs`, `script_run_outputs`, `cert_monitors`, `monitor_rules`, `monitor_events`
+
+#### Backend
+- `ssh::run_command()` — non-PTY SSH exec channel helper; feeds stdin, drains stdout/stderr, emits `ExecChunk` events
+- 15 new Tauri commands across `commands/scripts.rs` and `commands/certs.rs`
+- `require_operator()` / `require_admin()` guards on all new commands
+- Audit events: `SCRIPT_RUN`, `BULK_EXEC`
+
+### Changed
+- All dependency versions updated to latest stable (applied 13 Dependabot PRs):
+  - rusqlite 0.31 → 0.40, rand 0.8 → 0.10, sha2 0.10 → 0.11, socket2 0.5 → 0.6, windows 0.58 → 0.62
+  - react + react-dom 18 → 19, @xterm/xterm 5 → 6, @xterm/addon-fit 0.10 → 0.11, @xterm/addon-web-links 0.11 → 0.12
+  - GitHub Actions: checkout v7, setup-node v6, action-gh-release v3
+
+### Fixed
+- Clippy `should_implement_trait`: `Role::from_str` → `from_name`, `MachineType::from_str` → `from_name`
+- Clippy `redundant_closure`: `|e| AppError::Db(e)` / `|e| AppError::Io(e)` → function pointer variants
+- Clippy `manual_char_comparison`: MAC split closure → `split([':', '-'])`
+- Clippy `too_many_arguments`: `#[allow]` on `ssh::run_command` (8 params)
+- windows 0.62 API: `CredReadW`/`CredDeleteW` `flags` parameter now `Option<u32>` — wrapped with `Some(0)`
+- rand 0.10 API: `thread_rng()` → `rng()`, `use rand::RngCore` → `use rand::Rng`
 
 ---
 
