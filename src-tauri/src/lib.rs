@@ -6,6 +6,7 @@ pub mod iam;
 pub mod inventory;
 pub mod power;
 pub mod protocols;
+pub mod scripts;
 pub mod vault;
 
 use std::collections::HashMap;
@@ -111,6 +112,23 @@ pub fn run() {
             // Backup / restore
             commands::config::cmd_export_config,
             commands::config::cmd_import_config,
+            // Scripts
+            commands::scripts::cmd_list_scripts,
+            commands::scripts::cmd_create_script,
+            commands::scripts::cmd_update_script,
+            commands::scripts::cmd_delete_script,
+            commands::scripts::cmd_list_script_runs,
+            commands::scripts::cmd_get_script_run_outputs,
+            commands::scripts::cmd_run_script,
+            commands::scripts::cmd_finish_script_run,
+            commands::scripts::cmd_save_run_output,
+            commands::scripts::cmd_bulk_exec,
+            // Cert monitor
+            commands::certs::cmd_check_tls_cert,
+            commands::certs::cmd_list_cert_monitors,
+            commands::certs::cmd_upsert_cert_monitor,
+            commands::certs::cmd_delete_cert_monitor,
+            commands::certs::cmd_refresh_cert_monitor,
         ])
         .run(tauri::generate_context!())
         .expect("error while running WARDEN");

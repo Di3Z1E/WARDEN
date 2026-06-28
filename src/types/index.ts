@@ -99,6 +99,63 @@ export interface AuditEvent {
   hash_prev: string | null;
 }
 
+// ── Scripts ───────────────────────────────────────────────────────────────────
+
+export type ScriptLanguage = "powershell" | "bash" | "python";
+
+export interface Script {
+  id: string;
+  name: string;
+  language: ScriptLanguage;
+  body: string;
+  parameters_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScriptRun {
+  id: string;
+  script_id: string | null;
+  machine_ids_json: string;
+  started_at: string;
+  finished_at: string | null;
+  triggered_by: string;
+}
+
+export interface ScriptRunOutput {
+  id: string;
+  run_id: string;
+  machine_id: string;
+  stdout: string | null;
+  stderr: string | null;
+  exit_code: number | null;
+  finished_at: string | null;
+}
+
+// ── Cert monitor ──────────────────────────────────────────────────────────────
+
+export interface CertMonitor {
+  id: string;
+  host: string;
+  port: number;
+  label: string | null;
+  last_checked_at: string | null;
+  last_subject: string | null;
+  last_not_after: string | null;
+  last_days_remaining: number | null;
+  created_at: string;
+}
+
+export interface CertInfo {
+  host: string;
+  port: number;
+  subject: string;
+  issuer: string;
+  not_after: string;
+  days_remaining: number;
+  sans: string[];
+}
+
 // ── API response wrapper ──────────────────────────────────────────────────────
 
 export interface CmdError {

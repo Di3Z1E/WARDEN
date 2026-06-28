@@ -103,6 +103,9 @@ export type ModalType =
   | "my-account"
   | "backup"
   | "about"
+  | "scripts"
+  | "bulk-exec"
+  | "cert-monitor"
   | null;
 
 interface UiState {

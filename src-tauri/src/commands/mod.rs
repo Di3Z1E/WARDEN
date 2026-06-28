@@ -1,9 +1,11 @@
 pub mod audit;
+pub mod certs;
 pub mod config;
 pub mod iam;
 pub mod inventory;
 pub mod network;
 pub mod power;
+pub mod scripts;
 pub mod sessions;
 pub mod sftp;
 pub mod vault;

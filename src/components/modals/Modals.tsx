@@ -7,6 +7,9 @@ import AuditLogModal from "./AuditLogModal";
 import MyAccountModal from "./MyAccountModal";
 import BackupModal from "./BackupModal";
 import AboutModal from "./AboutModal";
+import ScriptLibrary from "../ScriptLibrary/ScriptLibrary";
+import BulkExec from "../BulkExec/BulkExec";
+import CertMonitor from "../CertMonitor/CertMonitor";
 
 export default function Modals() {
   const { modal, closeModal } = useUiStore();
@@ -20,13 +23,16 @@ export default function Modals() {
     return () => window.removeEventListener("keydown", onKey);
   }, [modal, closeModal]);
 
-  if (modal === "add-machine") return <AddMachineModal />;
+  if (modal === "add-machine")   return <AddMachineModal />;
   if (modal === "add-credential") return <AddCredentialModal />;
-  if (modal === "user-manager") return <UserManagerModal />;
-  if (modal === "audit") return <AuditLogModal />;
-  if (modal === "my-account") return <MyAccountModal />;
-  if (modal === "backup") return <BackupModal />;
-  if (modal === "about") return <AboutModal />;
+  if (modal === "user-manager")  return <UserManagerModal />;
+  if (modal === "audit")         return <AuditLogModal />;
+  if (modal === "my-account")    return <MyAccountModal />;
+  if (modal === "backup")        return <BackupModal />;
+  if (modal === "about")         return <AboutModal />;
+  if (modal === "scripts")       return <ScriptLibrary onClose={closeModal} />;
+  if (modal === "bulk-exec")     return <BulkExec onClose={closeModal} />;
+  if (modal === "cert-monitor")  return <CertMonitor onClose={closeModal} />;
 
   return null;
 }

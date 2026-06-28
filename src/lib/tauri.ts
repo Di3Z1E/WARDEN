@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AppUser,
   AuditEvent,
+  CertInfo,
+  CertMonitor,
   ConnectionProfile,
   CredentialSet,
   CurrentUser,
@@ -9,6 +11,10 @@ import type {
   Machine,
   MachineType,
   Protocol,
+  Script,
+  ScriptLanguage,
+  ScriptRun,
+  ScriptRunOutput,
 } from "../types";
 
 // ── IAM ───────────────────────────────────────────────────────────────────────
@@ -266,6 +272,70 @@ export interface NetFsEntry {
 
 export const netListDir = (path: string) =>
   invoke<NetFsEntry[]>("cmd_net_list_dir", { path });
+
+// ── Scripts ───────────────────────────────────────────────────────────────────
+
+export const listScripts = () => invoke<Script[]>("cmd_list_scripts");
+
+export const createScript = (input: {
+  name: string;
+  language: ScriptLanguage;
+  body: string;
+  parameters_json?: string;
+}) => invoke<Script>("cmd_create_script", { input });
+
+export const updateScript = (
+  scriptId: string,
+  input: { name: string; language: ScriptLanguage; body: string; parameters_json?: string }
+) => invoke<Script>("cmd_update_script", { scriptId, input });
+
+export const deleteScript = (scriptId: string) =>
+  invoke<void>("cmd_delete_script", { scriptId });
+
+export const listScriptRuns = (scriptId?: string) =>
+  invoke<ScriptRun[]>("cmd_list_script_runs", { scriptId: scriptId ?? null });
+
+export const getScriptRunOutputs = (runId: string) =>
+  invoke<ScriptRunOutput[]>("cmd_get_script_run_outputs", { runId });
+
+export const runScript = (input: { script_id: string; machine_ids: string[] }) =>
+  invoke<{ run_id: string }>("cmd_run_script", { input });
+
+export const finishScriptRun = (runId: string) =>
+  invoke<void>("cmd_finish_script_run", { runId });
+
+export const saveRunOutput = (input: {
+  run_id: string;
+  machine_id: string;
+  stdout: string;
+  stderr: string;
+  exit_code: number;
+}) => invoke<void>("cmd_save_run_output", { input });
+
+export const bulkExec = (input: { machine_ids: string[]; command: string }) =>
+  invoke<{ job_id: string }>("cmd_bulk_exec", { input });
+
+// ── Cert monitor ──────────────────────────────────────────────────────────────
+
+export const checkTlsCert = (input: { host: string; port?: number }) =>
+  invoke<CertInfo>("cmd_check_tls_cert", { input });
+
+export const listCertMonitors = () => invoke<CertMonitor[]>("cmd_list_cert_monitors");
+
+export const upsertCertMonitor = (input: {
+  id?: string;
+  host: string;
+  port?: number;
+  label?: string;
+}) => invoke<CertMonitor>("cmd_upsert_cert_monitor", { input });
+
+export const deleteCertMonitor = (id: string) =>
+  invoke<void>("cmd_delete_cert_monitor", { id });
+
+export const refreshCertMonitor = (id: string) =>
+  invoke<CertInfo>("cmd_refresh_cert_monitor", { id });
+
+// ── Network / diagnostics ─────────────────────────────────────────────────────
 
 export const verifyOsAndResetPassword = (
   osUsername: string,

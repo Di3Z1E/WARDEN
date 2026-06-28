@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Shield, Search, Users, BookOpen, LogOut, Terminal as TerminalIcon, DatabaseBackup, Info, Palette } from "lucide-react";
+import { Shield, Search, Users, BookOpen, LogOut, Terminal as TerminalIcon, DatabaseBackup, Info, Palette, Code2, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 import { useAuthStore, useSessionStore, useUiStore, useThemeStore, THEMES } from "../../store";
 import { logout } from "../../lib/tauri";
@@ -142,6 +142,28 @@ export default function Header() {
             >
               <DatabaseBackup className="w-3.5 h-3.5" />
               Backup
+            </button>
+          )}
+
+          {(user.role === "Admin" || user.role === "Operator") && (
+            <button
+              onClick={() => openModal("scripts")}
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-700 text-muted hover:text-gray-200 transition-colors text-xs"
+              title="Script Library"
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              Scripts
+            </button>
+          )}
+
+          {(user.role === "Admin" || user.role === "Operator") && (
+            <button
+              onClick={() => openModal("cert-monitor")}
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-700 text-muted hover:text-gray-200 transition-colors text-xs"
+              title="Certificate Monitor"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Certs
             </button>
           )}
 
