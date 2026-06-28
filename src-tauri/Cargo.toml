@@ -65,7 +65,7 @@ log = "0.4"
 env_logger = "0.11"
 
 # Networking (WoL / IPMI raw sockets)
-socket2 = "0.5"
+socket2 = "0.6"
 
 # HTTP client (Redfish / vSphere REST)
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
