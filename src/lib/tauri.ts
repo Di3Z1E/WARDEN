@@ -361,9 +361,29 @@ export const getMonitorRule = (machineId: string) =>
 export const exportAnsibleInventory = () =>
   invoke<string>("cmd_export_ansible_inventory");
 
+// ── Event log & log tail ──────────────────────────────────────────────────────
+
+import type { EventLogEntry, StartTailResult, MetricsSnapshot, ProcessInfo, ServiceInfo } from "../types";
+
+export const queryEventLog = (input: {
+  machine_id: string;
+  platform: string;
+  log_name: string;
+  level?: string;
+  source?: string;
+  event_id?: number;
+  since?: string;
+  limit?: number;
+}) => invoke<EventLogEntry[]>("cmd_query_event_log", { input });
+
+export const startLogTail = (machineId: string, pathOrUnit: string, platform: string) =>
+  invoke<StartTailResult>("cmd_start_log_tail", { machineId, pathOrUnit, platform });
+
+export const stopLogTail = (tailId: string) =>
+  invoke<void>("cmd_stop_log_tail", { tailId });
+
 // ── Sysinfo ───────────────────────────────────────────────────────────────────
 
-import type { MetricsSnapshot, ProcessInfo, ServiceInfo } from "../types";
 
 export const pollMetrics = (machineId: string, platform: string) =>
   invoke<MetricsSnapshot>("cmd_poll_metrics", { machineId, platform });

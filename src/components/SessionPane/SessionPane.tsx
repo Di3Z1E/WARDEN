@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Terminal, Monitor, Globe, Zap, HardDrive, PanelRightOpen, PanelRightClose, Cpu, List, Settings2 } from "lucide-react";
+import { X, Terminal, Monitor, Globe, Zap, HardDrive, PanelRightOpen, PanelRightClose, Cpu, List, Settings2, FileText, ScrollText } from "lucide-react";
 import clsx from "clsx";
 import { useSessionStore, useInventoryStore } from "../../store";
 import { disconnectSession, sftpDisconnect, connectSftp, listProfiles } from "../../lib/tauri";
@@ -10,9 +10,11 @@ import Dashboard from "../Dashboard/Dashboard";
 import MetricsPanel from "../SysInfo/MetricsPanel";
 import ProcessManager from "../SysInfo/ProcessManager";
 import ServiceManager from "../SysInfo/ServiceManager";
+import EventLogViewer from "../SysInfo/EventLogViewer";
+import LogTail from "../SysInfo/LogTail";
 import type { SessionTab } from "../../store";
 
-type ToolTab = "terminal" | "metrics" | "processes" | "services";
+type ToolTab = "terminal" | "metrics" | "processes" | "services" | "events" | "logtail";
 
 const PROTOCOL_ICONS: Record<string, React.ReactNode> = {
   SSH: <Terminal className="w-3 h-3" />,
@@ -168,9 +170,11 @@ function SessionContent({ tab }: { tab: SessionTab }) {
   useEffect(() => { setToolTab("terminal"); }, [tab.id]);
 
   const toolButtons: { id: ToolTab; icon: React.ReactNode; label: string }[] = [
-    { id: "metrics",   icon: <Cpu className="w-3 h-3" />,      label: "Metrics"   },
-    { id: "processes", icon: <List className="w-3 h-3" />,     label: "Processes" },
-    { id: "services",  icon: <Settings2 className="w-3 h-3" />, label: "Services"  },
+    { id: "metrics",   icon: <Cpu className="w-3 h-3" />,        label: "Metrics"   },
+    { id: "processes", icon: <List className="w-3 h-3" />,       label: "Processes" },
+    { id: "services",  icon: <Settings2 className="w-3 h-3" />,  label: "Services"  },
+    { id: "events",    icon: <FileText className="w-3 h-3" />,   label: "Events"    },
+    { id: "logtail",   icon: <ScrollText className="w-3 h-3" />, label: "Log Tail"  },
   ];
 
   return (
@@ -253,9 +257,11 @@ function SessionContent({ tab }: { tab: SessionTab }) {
           </div>
 
           {/* Tool panels */}
-          {toolTab === "metrics"   && <MetricsPanel   machineId={tab.machineId} platform={platform} />}
-          {toolTab === "processes" && <ProcessManager machineId={tab.machineId} platform={platform} />}
-          {toolTab === "services"  && <ServiceManager machineId={tab.machineId} platform={platform} />}
+          {toolTab === "metrics"   && <MetricsPanel    machineId={tab.machineId} platform={platform} />}
+          {toolTab === "processes" && <ProcessManager  machineId={tab.machineId} platform={platform} />}
+          {toolTab === "services"  && <ServiceManager  machineId={tab.machineId} platform={platform} />}
+          {toolTab === "events"    && <EventLogViewer  machineId={tab.machineId} platform={platform} />}
+          {toolTab === "logtail"   && <LogTail         machineId={tab.machineId} platform={platform} />}
         </div>
 
         {/* ── SFTP split panel (terminal tab only) ── */}

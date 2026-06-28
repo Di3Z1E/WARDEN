@@ -28,6 +28,8 @@ pub struct AppState {
     pub sftp_sessions: Mutex<HashMap<String, SftpEntry>>,
     /// Currently authenticated application user (None = not logged in).
     pub current_user: Mutex<Option<iam::AuthenticatedUser>>,
+    /// Background log-tail tasks keyed by tail UUID — abort handle to stop streaming.
+    pub tail_tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
 }
 
 pub fn run() {
@@ -51,6 +53,7 @@ pub fn run() {
                 sessions: Mutex::new(HashMap::new()),
                 sftp_sessions: Mutex::new(HashMap::new()),
                 current_user: Mutex::new(None),
+                tail_tasks: Mutex::new(HashMap::new()),
             };
 
             app.manage(state);
@@ -131,6 +134,10 @@ pub fn run() {
             commands::certs::cmd_upsert_cert_monitor,
             commands::certs::cmd_delete_cert_monitor,
             commands::certs::cmd_refresh_cert_monitor,
+            // Event log & log tail
+            commands::logs::cmd_query_event_log,
+            commands::logs::cmd_start_log_tail,
+            commands::logs::cmd_stop_log_tail,
             // System info (metrics, processes, services)
             commands::sysinfo::cmd_poll_metrics,
             commands::sysinfo::cmd_list_processes,

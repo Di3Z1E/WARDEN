@@ -183,6 +183,21 @@ export interface LivenessResult {
   port: number;
 }
 
+// ── Event log & log tail ──────────────────────────────────────────────────────
+
+export interface EventLogEntry {
+  ts: string;
+  id: number;
+  level: string;
+  source: string;
+  message: string;
+}
+
+export interface StartTailResult {
+  tail_id: string;
+  event_name: string;
+}
+
 // ── Sysinfo (metrics / processes / services) ──────────────────────────────────
 
 export interface MetricsSnapshot {
