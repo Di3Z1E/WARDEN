@@ -1,0 +1,109 @@
+[package]
+name = "warden"
+version = "0.1.0"
+edition = "2021"
+default-run = "warden"
+
+[lib]
+name = "warden_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "warden"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-shell = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# SSH / SFTP
+russh = "0.44"
+russh-sftp = "2"
+
+# Password hashing
+argon2 = "0.5"
+
+# TOTP MFA
+totp-rs = { version = "5", features = ["otpauth", "qr"] }
+
+# Identifiers & time
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Secret hygiene
+zeroize = { version = "1", features = ["derive", "serde"] }
+
+# Crypto / encoding
+base64 = "0.22"
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+aes-gcm = "0.10"
+
+# Async trait
+async-trait = "0.1"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Networking (WoL / IPMI raw sockets)
+socket2 = "0.5"
+
+# HTTP client (Redfish / vSphere REST)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# RDP
+ironrdp-connector = "0.9"
+ironrdp-pdu = "0.8"
+ironrdp-session = "0.10"
+ironrdp-tokio = { version = "0.9", features = ["reqwest"] }
+ironrdp-graphics = "0.8"
+ironrdp-input = "0.6"
+ironrdp-async = "0.9"
+
+# TLS (for RDP)
+tokio-rustls = "0.26"
+
+# Certificate parsing (extract SubjectPublicKey for CredSSP channel binding)
+x509-cert = "0.2"
+der = "0.7"
+
+# Image encoding (RDP frame compression + SFTP thumbnail)
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Credentials",
+    "Win32_System_Memory",
+    "Win32_Security_Cryptography",
+] }
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

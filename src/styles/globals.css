@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme variables ──────────────────────────────────────────────────────── */
+
+:root, [data-theme="dark"] {
+  --s900: 13 15 20;
+  --s800: 19 22 29;
+  --s700: 26 30 40;
+  --s600: 34 38 53;
+  --s500: 44 49 68;
+  --accent: 59 130 246;
+  --accent-hov: 37 99 235;
+  --muted: 107 114 128;
+  --scrollbar: 55 65 81;
+  --scrollbar-hov: 75 85 99;
+}
+
+[data-theme="total-dark"] {
+  --s900: 0 0 0;
+  --s800: 7 7 8;
+  --s700: 12 12 14;
+  --s600: 19 19 22;
+  --s500: 28 28 31;
+  --accent: 0 212 255;
+  --accent-hov: 0 170 210;
+  --muted: 74 74 82;
+  --scrollbar: 30 30 35;
+  --scrollbar-hov: 50 50 58;
+}
+
+[data-theme="discord"] {
+  --s900: 30 31 34;
+  --s800: 43 45 49;
+  --s700: 49 51 56;
+  --s600: 58 60 67;
+  --s500: 67 69 76;
+  --accent: 88 101 242;
+  --accent-hov: 71 82 196;
+  --muted: 128 132 142;
+  --scrollbar: 50 52 58;
+  --scrollbar-hov: 65 67 75;
+}
+
+[data-theme="vscode"] {
+  --s900: 30 30 30;
+  --s800: 37 37 38;
+  --s700: 45 45 45;
+  --s600: 60 60 60;
+  --s500: 74 74 74;
+  --accent: 0 122 204;
+  --accent-hov: 16 134 200;
+  --muted: 128 128 128;
+  --scrollbar: 55 55 55;
+  --scrollbar-hov: 75 75 75;
+}
+
+[data-theme="white"] {
+  --s900: 237 240 245;
+  --s800: 255 255 255;
+  --s700: 240 244 248;
+  --s600: 208 215 226;
+  --s500: 184 194 208;
+  --accent: 37 99 235;
+  --accent-hov: 29 78 216;
+  --muted: 100 116 139;
+  --scrollbar: 180 188 200;
+  --scrollbar-hov: 150 160 175;
+}
+
+/* Light theme — flip gray text classes so text stays readable */
+[data-theme="white"] .text-gray-100 { color: rgb(15 23 42) !important; }
+[data-theme="white"] .text-gray-200 { color: rgb(30 41 59) !important; }
+[data-theme="white"] .text-gray-300 { color: rgb(51 65 85) !important; }
+[data-theme="white"] .text-gray-400 { color: rgb(71 85 105) !important; }
+[data-theme="white"] .text-gray-500 { color: rgb(100 116 139) !important; }
+
+/* ── Login screen animations ──────────────────────────────────────────────── */
+
+@keyframes warden-letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.82);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes login-card-rise {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scan-sweep {
+  from { transform: translateY(-40vh); }
+  to   { transform: translateY(140vh); }
+}
+
+@keyframes grid-breathe {
+  0%, 100% { opacity: 0.02; }
+  50%       { opacity: 0.05; }
+}
+
+@keyframes pulse-ring-out {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes status-dot-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+.warden-letter {
+  opacity: 0;
+  display: inline-block;
+  animation: warden-letter-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.login-card-anim {
+  opacity: 0;
+  animation: login-card-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
+}
+
+.scan-line-anim {
+  animation: scan-sweep 10s linear infinite;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgb(var(--accent) / 0.06) 40%,
+    rgb(var(--accent) / 0.12) 50%,
+    rgb(var(--accent) / 0.06) 60%,
+    transparent 100%
+  );
+  height: 35vh;
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.grid-bg-anim {
+  animation: grid-breathe 5s ease-in-out infinite;
+}
+
+.pulse-ring-1 {
+  animation: pulse-ring-out 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.pulse-ring-2 {
+  animation: pulse-ring-out 2.8s cubic-bezier(0.4, 0, 0.6, 1) 0.9s infinite;
+}
+.pulse-ring-3 {
+  animation: pulse-ring-out 2.8s cubic-bezier(0.4, 0, 0.6, 1) 1.8s infinite;
+}
+
+.status-dot-blink {
+  animation: status-dot-blink 1.4s ease-in-out infinite;
+}
+
+/* ── Base styles ──────────────────────────────────────────────────────────── */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--scrollbar, 55 65 81));
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--scrollbar-hov, 75 85 99));
+  }
+}
+
+@layer utilities {
+  .text-muted {
+    color: rgb(var(--muted));
+  }
+  .border-surface {
+    border-color: rgb(var(--s500));
+  }
+}
