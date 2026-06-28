@@ -33,7 +33,7 @@ impl MachineType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_name(s: &str) -> Option<Self> {
         match s {
             "WindowsServer" => Some(MachineType::WindowsServer),
             "WindowsClient" => Some(MachineType::WindowsClient),
@@ -164,7 +164,7 @@ pub fn list_machines(conn: &Connection) -> Result<Vec<Machine>, AppError> {
     Ok(rows
         .filter_map(|r| r.ok())
         .filter_map(|(id, name, mt_str, folder_id, tags_json, notes, lca, ca, ua)| {
-            let machine_type = MachineType::from_str(&mt_str)?;
+            let machine_type = MachineType::from_name(&mt_str)?;
             let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
             Some(Machine {
                 id,
@@ -202,7 +202,7 @@ pub fn get_machine(conn: &Connection, id: &str) -> Result<Machine, AppError> {
     )
     .map_err(|_| AppError::NotFound(format!("Machine not found: {}", id)))
     .and_then(|(id, name, mt_str, folder_id, tags_json, notes, lca, ca, ua)| {
-        let machine_type = MachineType::from_str(&mt_str)
+        let machine_type = MachineType::from_name(&mt_str)
             .ok_or_else(|| AppError::Other("Unknown machine type".into()))?;
         let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
         Ok(Machine {
@@ -232,7 +232,7 @@ pub fn create_machine(
     conn: &Connection,
     input: &CreateMachineInput,
 ) -> Result<Machine, AppError> {
-    let mt = MachineType::from_str(&input.machine_type)
+    let mt = MachineType::from_name(&input.machine_type)
         .ok_or_else(|| AppError::Other(format!("Unknown type: {}", input.machine_type)))?;
 
     let id = Uuid::new_v4().to_string();
@@ -469,7 +469,7 @@ pub fn update_profile(
             })
         },
     )
-    .map_err(|e| AppError::Db(e))
+    .map_err(AppError::Db)
 }
 
 // ── Credential sets (metadata only) ──────────────────────────────────────────

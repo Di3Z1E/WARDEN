@@ -31,6 +31,7 @@ pub struct ExecChunk {
 /// Open a fresh SSH connection, run `command` (feeding `stdin_data` if provided),
 /// and stream output chunks via `tauri::Emitter` event `event_name`.
 /// Returns (stdout, stderr, exit_code) for callers that want aggregated results.
+#[allow(clippy::too_many_arguments)]
 pub async fn run_command(
     host: &str,
     port: u16,

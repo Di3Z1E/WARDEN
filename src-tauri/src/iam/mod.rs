@@ -30,7 +30,7 @@ impl Role {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_name(s: &str) -> Option<Self> {
         match s {
             "Admin" => Some(Role::Admin),
             "Operator" => Some(Role::Operator),
@@ -158,7 +158,7 @@ pub fn authenticate(
         return Err(AppError::AuthFailed("Invalid username or password".into()));
     }
 
-    let role = Role::from_str(&role_str)
+    let role = Role::from_name(&role_str)
         .ok_or_else(|| AppError::Other(format!("Unknown role: {}", role_str)))?;
 
     Ok(AuthenticatedUser {
@@ -188,7 +188,7 @@ pub fn list_users(conn: &Connection) -> Result<Vec<AppUser>, AppError> {
         })?
         .filter_map(|row| {
             row.ok().and_then(|(id, username, role_str, mfa, status, ca, ua)| {
-                Role::from_str(&role_str).map(|role| AppUser {
+                Role::from_name(&role_str).map(|role| AppUser {
                     id,
                     username,
                     role,
@@ -222,7 +222,7 @@ pub fn get_user_by_id(conn: &Connection, id: &str) -> Result<AppUser, AppError> 
     )
     .map_err(|_| AppError::NotFound(format!("User not found: {}", id)))
     .and_then(|(id, username, role_str, mfa, status, ca, ua)| {
-        Role::from_str(&role_str)
+        Role::from_name(&role_str)
             .ok_or_else(|| AppError::Other("Unknown role".into()))
             .map(|role| AppUser {
                 id,

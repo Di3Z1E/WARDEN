@@ -20,20 +20,20 @@ pub fn wake_on_lan(mac: &str, broadcast: Option<&str>) -> Result<(), AppError> {
         .map_err(|e| AppError::Other(format!("Invalid broadcast address: {}", e)))?;
 
     let socket = UdpSocket::bind("0.0.0.0:0")
-        .map_err(|e| AppError::Io(e))?;
+        .map_err(AppError::Io)?;
     socket
         .set_broadcast(true)
-        .map_err(|e| AppError::Io(e))?;
+        .map_err(AppError::Io)?;
     socket
         .send_to(&packet, broadcast_addr)
-        .map_err(|e| AppError::Io(e))?;
+        .map_err(AppError::Io)?;
 
     log::info!("WoL magic packet sent to MAC {} via {}", mac, broadcast_addr);
     Ok(())
 }
 
 fn parse_mac(mac: &str) -> Result<[u8; 6], AppError> {
-    let hex_parts: Vec<&str> = mac.split(|c| c == ':' || c == '-').collect();
+    let hex_parts: Vec<&str> = mac.split([':', '-']).collect();
     if hex_parts.len() != 6 {
         return Err(AppError::Other(format!("Invalid MAC address: {}", mac)));
     }

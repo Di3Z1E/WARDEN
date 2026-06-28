@@ -176,7 +176,7 @@ pub fn cmd_create_user(
     input: CreateUserInput,
 ) -> CmdResult<AppUser> {
     let actor = require_admin(&state)?.username;
-    let role = Role::from_str(&input.role).ok_or_else(|| CmdError {
+    let role = Role::from_name(&input.role).ok_or_else(|| CmdError {
         code: "INVALID_ROLE",
         message: format!("Unknown role: {}", input.role),
     })?;
@@ -215,7 +215,7 @@ pub fn cmd_update_user(
     let conn = state.db.lock().unwrap();
 
     if let Some(ref role_str) = input.role {
-        let role = Role::from_str(role_str).ok_or_else(|| CmdError {
+        let role = Role::from_name(role_str).ok_or_else(|| CmdError {
             code: "INVALID_ROLE",
             message: format!("Unknown role: {}", role_str),
         })?;
