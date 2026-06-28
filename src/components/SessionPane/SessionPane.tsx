@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Terminal, Monitor, Globe, Zap, HardDrive, PanelRightOpen, PanelRightClose } from "lucide-react";
+import { X, Terminal, Monitor, Globe, Zap, HardDrive, PanelRightOpen, PanelRightClose, Cpu, List, Settings2 } from "lucide-react";
 import clsx from "clsx";
-import { useSessionStore } from "../../store";
+import { useSessionStore, useInventoryStore } from "../../store";
 import { disconnectSession, sftpDisconnect, connectSftp, listProfiles } from "../../lib/tauri";
 import TerminalView from "../Terminal/Terminal";
 import FileBrowser from "../FileBrowser/FileBrowser";
 import RdpSession from "../RdpSession/RdpSession";
 import Dashboard from "../Dashboard/Dashboard";
+import MetricsPanel from "../SysInfo/MetricsPanel";
+import ProcessManager from "../SysInfo/ProcessManager";
+import ServiceManager from "../SysInfo/ServiceManager";
 import type { SessionTab } from "../../store";
+
+type ToolTab = "terminal" | "metrics" | "processes" | "services";
 
 const PROTOCOL_ICONS: Record<string, React.ReactNode> = {
   SSH: <Terminal className="w-3 h-3" />,
@@ -139,98 +144,154 @@ function ResizeDivider({ onResize }: { onResize: (dx: number) => void }) {
   );
 }
 
-/** Session content with optional resizable SFTP split panel */
+/** Session content with tool tabs (Metrics / Processes / Services) and optional SFTP split panel */
 function SessionContent({ tab }: { tab: SessionTab }) {
   const [sftpWidth, setSftpWidth] = useState(340);
+  const [toolTab, setToolTab] = useState<ToolTab>("terminal");
   const { sftpSessionId, sftpOpen, sftpLoading, sftpError, toggle, setSftpError } =
     useAttachedSftp(tab);
+
+  const { machines } = useInventoryStore();
+  const machine = machines.find((m) => m.id === tab.machineId);
+  const isWindows =
+    machine?.machine_type === "WindowsServer" || machine?.machine_type === "WindowsClient";
+  const platform = isWindows ? "windows" : "linux";
+
   const supportsSftp = tab.protocol === "SSH" || tab.protocol === "RDP";
+  const supportsTools = tab.protocol === "SSH";
 
   const handleResize = useCallback((dx: number) => {
     setSftpWidth((w) => Math.max(200, Math.min(700, w - dx)));
   }, []);
 
+  // Reset tool tab when switching sessions
+  useEffect(() => { setToolTab("terminal"); }, [tab.id]);
+
+  const toolButtons: { id: ToolTab; icon: React.ReactNode; label: string }[] = [
+    { id: "metrics",   icon: <Cpu className="w-3 h-3" />,      label: "Metrics"   },
+    { id: "processes", icon: <List className="w-3 h-3" />,     label: "Processes" },
+    { id: "services",  icon: <Settings2 className="w-3 h-3" />, label: "Services"  },
+  ];
+
   return (
-    <div className="flex h-full w-full overflow-hidden">
-      {/* ── Main content ── */}
-      <div className="flex-1 min-w-0 relative flex flex-col overflow-hidden">
-        {/* SFTP toggle button */}
-        {supportsSftp && (
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      {/* ── Tool tab bar (SSH sessions only) ── */}
+      {supportsTools && (
+        <div className="flex items-center gap-1 px-2 py-1 bg-surface-800 border-b border-surface-700 flex-shrink-0">
           <button
-            onClick={toggle}
-            disabled={sftpLoading}
-            title={sftpOpen ? "Hide SFTP browser" : "Open SFTP file browser"}
+            onClick={() => setToolTab("terminal")}
             className={clsx(
-              "absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all shadow-md",
-              sftpOpen
-                ? "bg-accent text-white hover:bg-blue-500"
-                : "bg-surface-700/90 text-muted hover:bg-surface-600 hover:text-gray-200 border border-surface-600",
-              sftpLoading && "opacity-60 cursor-wait"
+              "flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] transition-colors",
+              toolTab === "terminal"
+                ? "bg-accent/15 text-accent"
+                : "text-muted hover:text-gray-200 hover:bg-surface-700"
             )}
           >
-            {sftpOpen
-              ? <PanelRightClose className="w-3 h-3" />
-              : <PanelRightOpen className="w-3 h-3" />
-            }
-            {sftpLoading ? "Connecting…" : sftpOpen ? "Hide Files" : "Files"}
+            <Terminal className="w-3 h-3" />
+            Terminal
           </button>
-        )}
+          <span className="w-px h-3 bg-surface-600 mx-0.5" />
+          {toolButtons.map(({ id, icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setToolTab(id)}
+              className={clsx(
+                "flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] transition-colors",
+                toolTab === id
+                  ? "bg-accent/15 text-accent"
+                  : "text-muted hover:text-gray-200 hover:bg-surface-700"
+              )}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {(tab.protocol === "SSH" || tab.protocol === "Telnet") && (
-          <TerminalView sessionId={tab.id} />
-        )}
-        {tab.protocol === "SFTP" && <FileBrowser sessionId={tab.id} />}
-        {tab.protocol === "RDP" && (
-          <RdpSession sessionId={tab.id} width={1280} height={800} />
-        )}
-        {tab.protocol !== "SSH" &&
-          tab.protocol !== "Telnet" &&
-          tab.protocol !== "SFTP" &&
-          tab.protocol !== "RDP" && (
-            <div className="h-full flex flex-col items-center justify-center gap-3 text-muted">
-              <Globe className="w-10 h-10 opacity-20" />
-              <div className="text-sm">{tab.protocol} is not yet supported</div>
-            </div>
-          )}
-      </div>
-
-      {/* ── SFTP split panel ── */}
-      {sftpOpen && sftpSessionId && (
-        <>
-          <ResizeDivider onResize={handleResize} />
-          <div
-            className="flex-shrink-0 flex flex-col border-l border-surface-600 bg-surface-900 overflow-hidden"
-            style={{ width: sftpWidth }}
-          >
-            {/* Panel header */}
-            <div className="flex items-center gap-2 px-2 py-1.5 bg-surface-800 border-b border-surface-700 flex-shrink-0">
-              <HardDrive className="w-3 h-3 text-cyan-400" />
-              <span className="text-[11px] text-muted font-medium flex-1 truncate">
-                SFTP — {tab.host}
-              </span>
+      {/* ── Content row ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Main content */}
+        <div className="flex-1 min-w-0 relative flex flex-col overflow-hidden">
+          {/* Terminal — always mounted, hidden when tool panel active */}
+          <div className={clsx("flex-1 overflow-hidden", toolTab !== "terminal" && "hidden")}>
+            {/* SFTP toggle (only in terminal tab) */}
+            {supportsSftp && toolTab === "terminal" && (
               <button
                 onClick={toggle}
-                className="text-muted hover:text-gray-200 transition-colors"
-                title="Close SFTP panel"
+                disabled={sftpLoading}
+                title={sftpOpen ? "Hide SFTP browser" : "Open SFTP file browser"}
+                className={clsx(
+                  "absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all shadow-md",
+                  sftpOpen
+                    ? "bg-accent text-white hover:bg-blue-500"
+                    : "bg-surface-700/90 text-muted hover:bg-surface-600 hover:text-gray-200 border border-surface-600",
+                  sftpLoading && "opacity-60 cursor-wait"
+                )}
               >
-                <X className="w-3.5 h-3.5" />
+                {sftpOpen ? <PanelRightClose className="w-3 h-3" /> : <PanelRightOpen className="w-3 h-3" />}
+                {sftpLoading ? "Connecting…" : sftpOpen ? "Hide Files" : "Files"}
               </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <FileBrowser sessionId={sftpSessionId} />
-            </div>
+            )}
+
+            {(tab.protocol === "SSH" || tab.protocol === "Telnet") && (
+              <TerminalView sessionId={tab.id} />
+            )}
+            {tab.protocol === "SFTP" && <FileBrowser sessionId={tab.id} />}
+            {tab.protocol === "RDP" && (
+              <RdpSession sessionId={tab.id} width={1280} height={800} />
+            )}
+            {tab.protocol !== "SSH" &&
+              tab.protocol !== "Telnet" &&
+              tab.protocol !== "SFTP" &&
+              tab.protocol !== "RDP" && (
+                <div className="h-full flex flex-col items-center justify-center gap-3 text-muted">
+                  <Globe className="w-10 h-10 opacity-20" />
+                  <div className="text-sm">{tab.protocol} is not yet supported</div>
+                </div>
+              )}
           </div>
-        </>
-      )}
+
+          {/* Tool panels */}
+          {toolTab === "metrics"   && <MetricsPanel   machineId={tab.machineId} platform={platform} />}
+          {toolTab === "processes" && <ProcessManager machineId={tab.machineId} platform={platform} />}
+          {toolTab === "services"  && <ServiceManager machineId={tab.machineId} platform={platform} />}
+        </div>
+
+        {/* ── SFTP split panel (terminal tab only) ── */}
+        {toolTab === "terminal" && sftpOpen && sftpSessionId && (
+          <>
+            <ResizeDivider onResize={handleResize} />
+            <div
+              className="flex-shrink-0 flex flex-col border-l border-surface-600 bg-surface-900 overflow-hidden"
+              style={{ width: sftpWidth }}
+            >
+              <div className="flex items-center gap-2 px-2 py-1.5 bg-surface-800 border-b border-surface-700 flex-shrink-0">
+                <HardDrive className="w-3 h-3 text-cyan-400" />
+                <span className="text-[11px] text-muted font-medium flex-1 truncate">
+                  SFTP — {tab.host}
+                </span>
+                <button
+                  onClick={toggle}
+                  className="text-muted hover:text-gray-200 transition-colors"
+                  title="Close SFTP panel"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <FileBrowser sessionId={sftpSessionId} />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* SFTP error toast */}
       {sftpError && (
         <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3 py-2 bg-red-900/80 border border-red-700/60 rounded text-xs text-red-200 shadow-lg backdrop-blur-sm">
           <span>{sftpError}</span>
-          <button
-            onClick={() => setSftpError(null)}
-            className="text-red-300 hover:text-red-100 ml-1"
-          >
+          <button onClick={() => setSftpError(null)} className="text-red-300 hover:text-red-100 ml-1">
             <X className="w-3 h-3" />
           </button>
         </div>

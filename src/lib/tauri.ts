@@ -361,6 +361,25 @@ export const getMonitorRule = (machineId: string) =>
 export const exportAnsibleInventory = () =>
   invoke<string>("cmd_export_ansible_inventory");
 
+// ── Sysinfo ───────────────────────────────────────────────────────────────────
+
+import type { MetricsSnapshot, ProcessInfo, ServiceInfo } from "../types";
+
+export const pollMetrics = (machineId: string, platform: string) =>
+  invoke<MetricsSnapshot>("cmd_poll_metrics", { machineId, platform });
+
+export const listProcesses = (machineId: string, platform: string) =>
+  invoke<ProcessInfo[]>("cmd_list_processes", { machineId, platform });
+
+export const killProcess = (machineId: string, pid: number, platform: string) =>
+  invoke<void>("cmd_kill_process", { machineId, pid, platform });
+
+export const listServices = (machineId: string, platform: string) =>
+  invoke<ServiceInfo[]>("cmd_list_services", { machineId, platform });
+
+export const controlService = (machineId: string, name: string, action: string, platform: string) =>
+  invoke<void>("cmd_control_service", { machineId, name, action, platform });
+
 // ── Network / diagnostics ─────────────────────────────────────────────────────
 
 export const verifyOsAndResetPassword = (

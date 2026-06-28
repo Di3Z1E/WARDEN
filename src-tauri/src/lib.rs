@@ -131,6 +131,12 @@ pub fn run() {
             commands::certs::cmd_upsert_cert_monitor,
             commands::certs::cmd_delete_cert_monitor,
             commands::certs::cmd_refresh_cert_monitor,
+            // System info (metrics, processes, services)
+            commands::sysinfo::cmd_poll_metrics,
+            commands::sysinfo::cmd_list_processes,
+            commands::sysinfo::cmd_kill_process,
+            commands::sysinfo::cmd_list_services,
+            commands::sysinfo::cmd_control_service,
             // Liveness monitoring & Ansible export
             commands::monitoring::cmd_check_machine_liveness,
             commands::monitoring::cmd_get_liveness_history,

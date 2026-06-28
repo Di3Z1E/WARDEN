@@ -183,6 +183,28 @@ export interface LivenessResult {
   port: number;
 }
 
+// ── Sysinfo (metrics / processes / services) ──────────────────────────────────
+
+export interface MetricsSnapshot {
+  cpu_pct: number;
+  mem_total_mb: number;
+  mem_free_mb: number;
+}
+
+export interface ProcessInfo {
+  pid: number;
+  name: string;
+  cpu_val: number;
+  mem_mb: number;
+}
+
+export interface ServiceInfo {
+  name: string;
+  display_name: string;
+  status: string;
+  start_type: string;
+}
+
 // ── API response wrapper ──────────────────────────────────────────────────────
 
 export interface CmdError {
