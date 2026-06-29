@@ -2,15 +2,15 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=18,18,18,20,30,60,18,18,18&height=200&section=header&text=WARDEN&fontSize=80&fontColor=60a5fa&fontAlignY=45&desc=Windows%20IT%20Administration%20Console&descSize=22&descColor=93c5fd&descAlignY=70&animation=fadeIn" width="100%" />
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=60a5fa&center=true&vCenter=true&width=700&lines=RDP+%C2%B7+SSH+%C2%B7+Telnet+%C2%B7+SFTP+in+one+console+%F0%9F%96%A5%EF%B8%8F;IronRDP+engine%2C+no+mstsc.exe+required+%F0%9F%9A%AB;Windows+Credential+Manager+vault+%F0%9F%94%90;SHA-256+tamper-evident+audit+log+%F0%9F%93%8B;Single+distributable+binary+%F0%9F%93%A6" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&duration=3000&pause=1000&color=60a5fa&center=true&vCenter=true&width=700&lines=RDP+%C2%B7+SSH+%C2%B7+Telnet+%C2%B7+SFTP+in+one+console+%F0%9F%96%A5%EF%B8%8F;IronRDP+engine%2C+no+mstsc.exe+required+%F0%9F%9A%AB;Windows+Credential+Manager+vault+%F0%9F%94%90;MFA%2FTOTP+%C2%B7+SSH+key+management+%F0%9F%94%91;SHA-256+tamper-evident+audit+log+%F0%9F%93%8B;Single+distributable+binary+%F0%9F%93%A6" alt="Typing SVG" />
 
 <br/>
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4?style=for-the-badge&logo=windows&labelColor=1a1a1a)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/version-0.2.0-60a5fa?style=for-the-badge&labelColor=1a1a1a)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-60a5fa?style=for-the-badge&labelColor=1a1a1a)](CHANGELOG.md)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?style=for-the-badge&logo=tauri&labelColor=1a1a1a)](https://tauri.app)
-[![Rust](https://img.shields.io/badge/Rust-1.96-CE422B?style=for-the-badge&logo=rust&labelColor=1a1a1a)](https://www.rust-lang.org)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&labelColor=1a1a1a)](https://react.dev)
+[![Rust](https://img.shields.io/badge/Rust-1.87-CE422B?style=for-the-badge&logo=rust&labelColor=1a1a1a)](https://www.rust-lang.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&labelColor=1a1a1a)](https://react.dev)
 [![License](https://img.shields.io/badge/license-MIT-60a5fa?style=for-the-badge&labelColor=1a1a1a)](LICENSE)
 
 <br/>
@@ -26,7 +26,7 @@
 **WARDEN** is a native Windows desktop application that consolidates IT infrastructure management into a single, secure interface. It replaces the fragmented toolset of `mstsc.exe`, standalone SSH clients, browser tabs, and credential spreadsheets with one coherent console built on hardened security principles.
 
 > [!NOTE]
-> **0.2.0: RDP & SFTP era.** This release ships a full in-process RDP client powered by IronRDP (TLS + NLA/CredSSP, no `mstsc.exe`) and an integrated SFTP file browser (browse, upload, download, mkdir, delete, rename). Every session opens inside WARDEN. Every credential lives in Windows Credential Manager. Every action is written to a tamper-evident SHA-256 hash-chained audit log.
+> **0.5.0: Full-featured IT console.** This release ships everything from core IAM and protocol support through live SSH session panels, MFA/TOTP, SSH key management, script automation, certificate monitoring, and per-machine TCP liveness monitoring — all inside one native exe, backed by Windows Credential Manager and a tamper-evident audit log.
 
 ---
 
@@ -34,7 +34,7 @@
 
 ### 🖥️ Remote Access
 - 🔵 **RDP**: IronRDP pure-Rust engine. TLS upgrade + NLA/CredSSP credential injection. Canvas rendering with full keyboard and mouse forwarding. Zero `mstsc.exe`.
-- 🟢 **SSH**: russh 0.44. Full PTY, terminal resize, password auth, public key auth.
+- 🟢 **SSH**: russh 0.60. Full PTY, terminal resize, password auth, public key auth. In-session panels: live system metrics, process manager, service manager, event log viewer, and live log tail.
 - 🟡 **Telnet**: async Tokio TCP with IAC option negotiation and clean output stripping.
 - 🩵 **SFTP**: russh-sftp file browser. Breadcrumb navigation, upload, download, mkdir, rename, delete. Symlink display.
 
@@ -47,8 +47,30 @@
 ### 🛡️ Identity & Access Management
 - Four roles: **Admin**, **Operator**, **Auditor**, **ReadOnly** — enforced in Rust on every command
 - **Argon2id** password hashing with per-user random salts
+- **MFA/TOTP**: RFC 6238 TOTP two-factor authentication with QR code enrollment; enforced at login
 - First-run setup wizard bootstraps the initial Admin account
 - Self-service account editing and full admin user management
+
+### 🔐 SSH Key Management
+- **Generate** Ed25519 or RSA key pairs directly inside WARDEN
+- **Upload** and store private keys in Windows Credential Manager
+- **Deploy** public keys to remote hosts via `~/.ssh/authorized_keys`
+- **Copy** public key to clipboard from the key manager panel
+
+### 📜 Script Library & Automation
+- **Script CRUD**: create, edit, delete PowerShell / Bash / Python scripts stored in SQLite
+- **Live streaming runner**: execute a script concurrently across any set of inventory machines via SSH; per-machine output streamed in real time
+- **Bulk command execution**: ad-hoc SSH exec across any selection of SSH-capable machines; live per-machine output grid
+
+### 🔬 Certificate Monitor
+- **Quick check**: one-off TLS certificate inspection by hostname + port; shows subject, issuer, expiry, SANs, and days remaining
+- **Persisted monitors**: watch-list with color-coded expiry badges (green / yellow / red); refresh on demand; last-checked metadata in DB
+
+### 📡 Monitoring & Alerting
+- **TCP liveness checks**: per-machine reachability probes on any port, configurable interval
+- **Uptime sparklines**: rolling status history on the Dashboard per machine
+- **Desktop notifications**: alert on host-down and host-recovered events via Tauri notification plugin
+- **Ansible export**: generate a valid Ansible `inventory.yaml` from the machine registry
 
 ### 📋 Audit Log
 - Append-only SHA-256 hash-chained event log in SQLite
@@ -85,26 +107,28 @@
 <div align="left">
 
 **Shell** &nbsp;![Tauri](https://img.shields.io/badge/Tauri%20v2-FFC131?style=flat-square&logo=tauri&logoColor=white)
-![React](https://img.shields.io/badge/React%2018-61DAFB?style=flat-square&logo=react&logoColor=black)
+![React](https://img.shields.io/badge/React%2019-61DAFB?style=flat-square&logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript%205-3178C6?style=flat-square&logo=typescript&logoColor=white)
 
 **Backend** &nbsp;![Rust](https://img.shields.io/badge/Rust%202021-CE422B?style=flat-square&logo=rust&logoColor=white)
 ![Tokio](https://img.shields.io/badge/Tokio-async-green?style=flat-square)
 
 **Protocols** &nbsp;![RDP](https://img.shields.io/badge/IronRDP-0.9-0078D4?style=flat-square)
-![SSH](https://img.shields.io/badge/russh-0.44-4CAF50?style=flat-square)
+![SSH](https://img.shields.io/badge/russh-0.60-4CAF50?style=flat-square)
 ![SFTP](https://img.shields.io/badge/russh--sftp-2.x-26C6DA?style=flat-square)
 ![TLS](https://img.shields.io/badge/tokio--rustls-0.26-orange?style=flat-square)
 
 **Security** &nbsp;![Argon2](https://img.shields.io/badge/Argon2id-password_hashing-7E57C2?style=flat-square)
+![TOTP](https://img.shields.io/badge/totp--rs-5-9C27B0?style=flat-square)
 ![WinCred](https://img.shields.io/badge/Windows%20Credential%20Manager-0078D4?style=flat-square&logo=windows)
 ![Zeroize](https://img.shields.io/badge/zeroize-secret_hygiene-red?style=flat-square)
 
-**Storage** &nbsp;![SQLite](https://img.shields.io/badge/SQLite-rusqlite%200.31-003B57?style=flat-square&logo=sqlite&logoColor=white)
+**Storage** &nbsp;![SQLite](https://img.shields.io/badge/SQLite-rusqlite%200.40-003B57?style=flat-square&logo=sqlite&logoColor=white)
 
-**UI** &nbsp;![Tailwind](https://img.shields.io/badge/Tailwind%20CSS%203-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white)
-![xterm](https://img.shields.io/badge/xterm.js%20v5-terminal-333333?style=flat-square)
-![Zustand](https://img.shields.io/badge/Zustand%204-state-brown?style=flat-square)
+**UI** &nbsp;![Tailwind](https://img.shields.io/badge/Tailwind%20CSS%20v4-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white)
+![xterm](https://img.shields.io/badge/xterm.js%20v6-terminal-333333?style=flat-square)
+![Zustand](https://img.shields.io/badge/Zustand%205-state-brown?style=flat-square)
+![Vite](https://img.shields.io/badge/Vite%208-bundler-646CFF?style=flat-square&logo=vite&logoColor=white)
 
 </div>
 
@@ -117,8 +141,8 @@
 | Requirement | Version | Notes |
 |---|---|---|
 | Windows | 10 21H2+ / 11 (x64) | Runtime |
-| Rust toolchain | 1.70+ | `rustup install stable` |
-| Node.js | 18+ | Frontend build |
+| Rust toolchain | 1.80+ | `rustup install stable` |
+| Node.js | 20+ | Frontend build |
 | Visual Studio Build Tools | 2022 | MSVC linker, C++ workload |
 | WebView2 | Runtime | Bundled with Windows 11; auto-installed on 10 |
 
@@ -151,8 +175,8 @@ npm run tauri build
 Outputs in `src-tauri/target/release/`:
 ```
 warden.exe                                    <- portable, no install needed
-bundle/nsis/WARDEN_0.2.0_x64-setup.exe       <- NSIS installer
-bundle/msi/WARDEN_0.2.0_x64_en-US.msi        <- MSI package
+bundle/nsis/WARDEN_0.5.0_x64-setup.exe       <- NSIS installer
+bundle/msi/WARDEN_0.5.0_x64_en-US.msi        <- MSI package
 ```
 
 App data is stored in `%APPDATA%\com.warden.app\`. The portable exe is fully self-contained; copy it to any Windows 10/11 machine and run.
@@ -192,6 +216,7 @@ All roles can edit their own username and password via **My Account** (click you
 - **Memory hygiene**: all credential material is held in `Zeroizing<String>` and zeroed on drop. Passwords are never logged or serialized to the frontend.
 - **RDP NLA**: CredSSP pre-authentication is handled entirely in Rust (IronRDP + ReqwestNetworkClient). The canvas frontend receives only RGBA pixel deltas, never protocol state or credentials.
 - **SSH/SFTP TOFU**: host keys are accepted and pinned on first connection, with a warning on change.
+- **MFA/TOTP**: TOTP codes are verified in Rust before any session is established. QR enrollment uses `totp-rs` with `otpauth` URI format.
 - **Audit integrity**: each log entry stores `SHA-256(prev_hash || event_data)`, forming a verifiable chain. Deleted or modified entries break the chain.
 - **RBAC enforcement**: role checks happen in the Rust command handlers, not just in the UI. The frontend cannot bypass them.
 
@@ -206,9 +231,10 @@ All roles can edit their own username and password via **My Account** (click you
 |---|---|---|
 | **v0.1** | Core: IAM, vault, SSH, Telnet, inventory, audit | ✅ Shipped |
 | **v0.2** | Remote Desktop: RDP (IronRDP + TLS/NLA) + SFTP file browser | ✅ Shipped |
-| **v0.3** | Automation: script runner, scheduled tasks, Ansible export | 🔄 Planned |
-| **v0.4** | Monitoring: liveness checks, uptime widgets, desktop alerts | 🔄 Planned |
-| **v0.5** | Multi-user: WARDEN Server, team inventory, group ACLs | 🔄 Planned |
+| **v0.3** | Automation: script library, bulk exec, certificate monitor | ✅ Shipped |
+| **v0.4** | Monitoring: TCP liveness, sparklines, desktop alerts, Ansible export, SSH session panels | ✅ Shipped |
+| **v0.5** | Security: MFA/TOTP, SSH key management | ✅ Shipped |
+| **v0.6** | Multi-user: WARDEN Server, team inventory, group ACLs | 🔄 Planned |
 
 ---
 
@@ -222,6 +248,6 @@ Distributed under the **MIT License**. See `LICENSE` for details.
 
 ---
 
-*WARDEN © 2026 David Azani*
+*WARDEN © 2026 Di3Z1E*
 
 </div>
