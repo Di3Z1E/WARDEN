@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["full"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 
 # SSH / SFTP
-russh = "0.44"
+russh = "0.60"
 russh-sftp = "2"
 
 # Password hashing
