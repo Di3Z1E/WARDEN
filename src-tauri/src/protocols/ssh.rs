@@ -61,13 +61,16 @@ pub async fn run_command(
             )
             .map_err(|e| anyhow::anyhow!("Key decode: {}", e))?;
             handle
-                .authenticate_publickey(username, Arc::new(key))
+                .authenticate_publickey(
+                    username,
+                    russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key), None),
+                )
                 .await
                 .map_err(|e| anyhow::anyhow!("SSH auth: {}", e))?
         }
     };
 
-    if !authed {
+    if !authed.success() {
         return Err(anyhow::anyhow!("SSH authentication failed"));
     }
 
@@ -126,12 +129,12 @@ struct SshHandler;
 impl client::Handler for SshHandler {
     type Error = russh::Error;
 
-    async fn check_server_key(
+    fn check_server_key(
         &mut self,
-        _server_public_key: &russh::keys::key::PublicKey,
-    ) -> Result<bool, Self::Error> {
+        _server_public_key: &russh::keys::PublicKey,
+    ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send {
         // TODO (NFR-SEC-003): implement TOFU + host key pinning
-        Ok(true)
+        std::future::ready(Ok(true))
     }
 }
 
@@ -214,13 +217,16 @@ async fn run_session(
             )
             .map_err(|e| anyhow::anyhow!("Key decode: {}", e))?;
             handle
-                .authenticate_publickey(&params.username, Arc::new(key))
+                .authenticate_publickey(
+                    &params.username,
+                    russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key), None),
+                )
                 .await
                 .map_err(|e| anyhow::anyhow!("SSH auth: {}", e))?
         }
     };
 
-    if !authed {
+    if !authed.success() {
         return Err(anyhow::anyhow!("SSH authentication failed"));
     }
 

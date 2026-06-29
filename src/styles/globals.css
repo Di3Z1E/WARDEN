@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* ── Tailwind v4 theme — mapped to runtime CSS vars so themes work ─────────── */
+
+@theme inline {
+  --color-surface-900: rgb(var(--s900));
+  --color-surface-800: rgb(var(--s800));
+  --color-surface-700: rgb(var(--s700));
+  --color-surface-600: rgb(var(--s600));
+  --color-surface-500: rgb(var(--s500));
+  --color-accent:      rgb(var(--accent));
+  --color-danger:      #ef4444;
+  --color-success:     #22c55e;
+  --color-warning:     #f59e0b;
+  --color-muted:       rgb(var(--muted));
+  --font-mono: "'JetBrains Mono'", Consolas, monospace;
+}
 
 /* ── Theme variables ──────────────────────────────────────────────────────── */
 
@@ -192,11 +206,6 @@
   }
 }
 
-@layer utilities {
-  .text-muted {
-    color: rgb(var(--muted));
-  }
-  .border-surface {
-    border-color: rgb(var(--s500));
-  }
+@utility border-surface {
+  border-color: rgb(var(--s500));
 }

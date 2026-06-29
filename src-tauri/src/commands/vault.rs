@@ -207,23 +207,20 @@ pub fn cmd_generate_ssh_key(
     let actor = require_admin(&state)?.username;
 
     // Generate ed25519 key pair
-    let kp = russh::keys::key::KeyPair::generate_ed25519().ok_or_else(|| CmdError {
-        code: "KEYGEN_ERROR",
-        message: "Ed25519 key generation failed".into(),
-    })?;
+    let kp = russh::keys::PrivateKey::random(
+        &mut rand::rng(),
+        russh::keys::ssh_key::Algorithm::Ed25519,
+    )
+    .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
 
     // Encode private key as OpenSSH PEM
-    let mut pem_bytes: Vec<u8> = Vec::new();
-    russh::keys::encode_pkcs8_pem(&kp, &mut pem_bytes)
-        .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
-    let private_key_pem = String::from_utf8(pem_bytes)
+    let private_key_pem = kp
+        .to_openssh(russh::keys::ssh_key::LineEnding::LF)
         .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
 
     // Build authorized_keys line
-    let pub_key = kp
-        .clone_public_key()
-        .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
-    let public_key = format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64());
+    let pub_key = kp.public_key();
+    let public_key = format!("{} {} WARDEN", pub_key.algorithm().as_str(), pub_key.public_key_base64());
 
     // Store in vault
     let vault_ref = vault::new_ref();
@@ -231,7 +228,7 @@ pub fn cmd_generate_ssh_key(
         &vault_ref,
         &VaultSecret::SshKey {
             username: input.username.clone(),
-            private_key: Zeroizing::new(private_key_pem),
+            private_key: private_key_pem,
             passphrase: None,
         },
     )
@@ -299,11 +296,9 @@ pub fn cmd_get_public_key(
     let kp = russh::keys::decode_secret_key(&private_key_pem, pass_str.as_deref())
         .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
 
-    let pub_key = kp
-        .clone_public_key()
-        .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+    let pub_key = kp.public_key();
 
-    Ok(format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64()))
+    Ok(format!("{} {} WARDEN", pub_key.algorithm().as_str(), pub_key.public_key_base64()))
 }
 
 // ── Deploy public key to a remote machine via SSH ─────────────────────────────
@@ -346,10 +341,8 @@ pub async fn cmd_deploy_public_key(
         let pass_str = passphrase_opt.as_deref().map(|p| p.as_str().to_string());
         let kp = russh::keys::decode_secret_key(&private_key_pem, pass_str.as_deref())
             .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
-        let pub_key = kp
-            .clone_public_key()
-            .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
-        format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64())
+        let pub_key = kp.public_key();
+        format!("{} {} WARDEN", pub_key.algorithm().as_str(), pub_key.public_key_base64())
     };
 
     // Get connection target (host + port) from machine profiles

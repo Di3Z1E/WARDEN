@@ -16,12 +16,12 @@ pub struct SftpHandler;
 impl client::Handler for SftpHandler {
     type Error = russh::Error;
 
-    async fn check_server_key(
+    fn check_server_key(
         &mut self,
-        _server_public_key: &russh::keys::key::PublicKey,
-    ) -> Result<bool, Self::Error> {
+        _server_public_key: &russh::keys::PublicKey,
+    ) -> impl std::future::Future<Output = Result<bool, Self::Error>> + Send {
         // TODO: verify against known_hosts (TOFU for now)
-        Ok(true)
+        std::future::ready(Ok(true))
     }
 }
 
@@ -73,13 +73,16 @@ pub async fn connect(params: SftpConnectParams) -> anyhow::Result<SftpEntry> {
             )
             .map_err(|e| anyhow::anyhow!("Key decode: {}", e))?;
             handle
-                .authenticate_publickey(&params.username, Arc::new(key))
+                .authenticate_publickey(
+                    &params.username,
+                    russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key), None),
+                )
                 .await
                 .map_err(|e| anyhow::anyhow!("Auth: {}", e))?
         }
     };
 
-    if !authed {
+    if !authed.success() {
         return Err(anyhow::anyhow!("Authentication failed"));
     }
 
