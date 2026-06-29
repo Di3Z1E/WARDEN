@@ -95,6 +95,7 @@ export const useSessionStore = create<SessionState>((set) => ({
 export type ModalType =
   | "add-machine"
   | "add-credential"
+  | "credentials"
   | "add-profile"
   | "user-manager"
   | "audit"

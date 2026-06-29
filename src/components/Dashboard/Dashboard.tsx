@@ -61,7 +61,13 @@ export default function Dashboard() {
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           <StatCard icon={<Server className="w-4 h-4" />} label="Machines" value={machines.length} accent="blue" />
-          <StatCard icon={<Key className="w-4 h-4" />} label="Credentials" value={credCount ?? "…"} accent="purple" />
+          <StatCard
+            icon={<Key className="w-4 h-4" />}
+            label="Credentials"
+            value={credCount ?? "…"}
+            accent="purple"
+            onClick={isAdmin ? () => openModal("credentials") : undefined}
+          />
           <StatCard
             icon={<TerminalIcon className="w-4 h-4" />}
             label="Active sessions"
@@ -85,8 +91,8 @@ export default function Dashboard() {
                 <ActionBtn icon={<Plus className="w-3.5 h-3.5" />} onClick={() => openModal("add-machine")}>
                   Add machine
                 </ActionBtn>
-                <ActionBtn icon={<Key className="w-3.5 h-3.5" />} onClick={() => openModal("add-credential")}>
-                  Add credential
+                <ActionBtn icon={<Key className="w-3.5 h-3.5" />} onClick={() => openModal("credentials")}>
+                  Manage credentials
                 </ActionBtn>
                 <ActionBtn icon={<BookOpen className="w-3.5 h-3.5" />} onClick={() => openModal("audit")}>
                   Audit log
@@ -187,13 +193,14 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function StatCard({
-  icon, label, value, accent, pulse,
+  icon, label, value, accent, pulse, onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number | string;
   accent: "blue" | "purple" | "green" | "gray";
   pulse?: boolean;
+  onClick?: () => void;
 }) {
   const colors = {
     blue: "text-blue-400",
@@ -202,7 +209,13 @@ function StatCard({
     gray: "text-muted",
   };
   return (
-    <div className="rounded-lg bg-surface-800 border border-surface-600 px-4 py-3 hover:border-surface-500 transition-colors">
+    <div
+      className={clsx(
+        "rounded-lg bg-surface-800 border border-surface-600 px-4 py-3 transition-colors",
+        onClick ? "cursor-pointer hover:border-accent/50 hover:bg-accent/5" : "hover:border-surface-500",
+      )}
+      onClick={onClick}
+    >
       <div className={clsx("mb-2 flex items-center gap-1.5", colors[accent])}>
         {icon}
         {pulse && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}

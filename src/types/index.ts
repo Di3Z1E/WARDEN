@@ -84,11 +84,16 @@ export interface ConnectionProfile {
 export interface CredentialSet {
   id: string;
   name: string;
-  kind: "Password" | "SshKey";
+  kind: "Password" | "SshKey" | "Totp";
   vault_ref: string;
   username: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface GenerateSshKeyResult {
+  credential_set: CredentialSet;
+  public_key: string;
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────

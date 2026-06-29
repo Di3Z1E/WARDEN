@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useUiStore } from "../../store";
 import AddMachineModal from "./AddMachineModal";
 import AddCredentialModal from "./AddCredentialModal";
+import CredentialManagerModal from "./CredentialManagerModal";
 import UserManagerModal from "./UserManagerModal";
 import AuditLogModal from "./AuditLogModal";
 import MyAccountModal from "./MyAccountModal";
@@ -24,8 +25,9 @@ export default function Modals() {
     return () => window.removeEventListener("keydown", onKey);
   }, [modal, closeModal]);
 
-  if (modal === "add-machine")   return <AddMachineModal />;
-  if (modal === "add-credential") return <AddCredentialModal />;
+  if (modal === "add-machine")       return <AddMachineModal />;
+  if (modal === "add-credential")    return <AddCredentialModal />;
+  if (modal === "credentials")       return <CredentialManagerModal />;
   if (modal === "user-manager")  return <UserManagerModal />;
   if (modal === "audit")         return <AuditLogModal />;
   if (modal === "my-account")    return <MyAccountModal />;

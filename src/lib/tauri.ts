@@ -8,6 +8,7 @@ import type {
   CredentialSet,
   CurrentUser,
   Folder,
+  GenerateSshKeyResult,
   LoginResult,
   Machine,
   MachineType,
@@ -165,6 +166,25 @@ export const createCredentialSet = (input: {
 
 export const deleteCredentialSet = (credId: string) =>
   invoke<void>("cmd_delete_credential_set", { credId });
+
+export const uploadSshKey = (input: {
+  name: string;
+  username: string;
+  private_key_pem: string;
+  passphrase?: string | null;
+}) => invoke<CredentialSet>("cmd_upload_ssh_key", { input });
+
+export const generateSshKey = (input: { name: string; username: string }) =>
+  invoke<GenerateSshKeyResult>("cmd_generate_ssh_key", { input });
+
+export const getPublicKey = (credId: string) =>
+  invoke<string>("cmd_get_public_key", { credId });
+
+export const deployPublicKey = (input: {
+  credential_set_id: string;
+  target_machine_id: string;
+  auth_credential_set_id: string;
+}) => invoke<void>("cmd_deploy_public_key", { input });
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
 

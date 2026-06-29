@@ -1,4 +1,5 @@
-use serde::Deserialize;
+use russh::keys::PublicKeyBase64;
+use serde::{Deserialize, Serialize};
 use tauri::State;
 use zeroize::Zeroizing;
 
@@ -119,6 +120,298 @@ pub fn cmd_delete_credential_set(
         None,
     )
     .ok();
+
+    Ok(())
+}
+
+// ── SSH Key (upload existing) ──────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct UploadSshKeyInput {
+    pub name: String,
+    pub username: String,
+    pub private_key_pem: String,
+    pub passphrase: Option<String>,
+}
+
+#[tauri::command]
+pub fn cmd_upload_ssh_key(
+    state: State<'_, AppState>,
+    input: UploadSshKeyInput,
+) -> CmdResult<CredentialSetMeta> {
+    let actor = require_admin(&state)?.username;
+
+    // Validate the key parses before storing
+    russh::keys::decode_secret_key(
+        &input.private_key_pem,
+        input.passphrase.as_deref(),
+    )
+    .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+
+    let vault_ref = vault::new_ref();
+    vault::store(
+        &vault_ref,
+        &VaultSecret::SshKey {
+            username: input.username.clone(),
+            private_key: Zeroizing::new(input.private_key_pem),
+            passphrase: input.passphrase.map(Zeroizing::new),
+        },
+    )
+    .map_err(CmdError::from)?;
+
+    let conn = state.db.lock().unwrap();
+    let meta = inventory::create_credential_set(
+        &conn,
+        &input.name,
+        "SshKey",
+        &vault_ref,
+        Some(&input.username),
+    )
+    .map_err(|e| {
+        vault::delete(&vault_ref).ok();
+        CmdError::from(e)
+    })?;
+
+    audit::log(
+        &conn,
+        &actor,
+        "VLT_UPLOAD_KEY",
+        Some(&meta.id),
+        AuditResult::Ok,
+        Some(&input.name),
+    )
+    .ok();
+
+    Ok(meta)
+}
+
+// ── SSH Key Generation ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct GenerateSshKeyInput {
+    pub name: String,
+    pub username: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenerateSshKeyResult {
+    pub credential_set: CredentialSetMeta,
+    pub public_key: String,
+}
+
+#[tauri::command]
+pub fn cmd_generate_ssh_key(
+    state: State<'_, AppState>,
+    input: GenerateSshKeyInput,
+) -> CmdResult<GenerateSshKeyResult> {
+    let actor = require_admin(&state)?.username;
+
+    // Generate ed25519 key pair
+    let kp = russh::keys::key::KeyPair::generate_ed25519().ok_or_else(|| CmdError {
+        code: "KEYGEN_ERROR",
+        message: "Ed25519 key generation failed".into(),
+    })?;
+
+    // Encode private key as OpenSSH PEM
+    let mut pem_bytes: Vec<u8> = Vec::new();
+    russh::keys::encode_pkcs8_pem(&kp, &mut pem_bytes)
+        .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
+    let private_key_pem = String::from_utf8(pem_bytes)
+        .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
+
+    // Build authorized_keys line
+    let pub_key = kp
+        .clone_public_key()
+        .map_err(|e| CmdError { code: "KEYGEN_ERROR", message: e.to_string() })?;
+    let public_key = format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64());
+
+    // Store in vault
+    let vault_ref = vault::new_ref();
+    vault::store(
+        &vault_ref,
+        &VaultSecret::SshKey {
+            username: input.username.clone(),
+            private_key: Zeroizing::new(private_key_pem),
+            passphrase: None,
+        },
+    )
+    .map_err(CmdError::from)?;
+
+    let conn = state.db.lock().unwrap();
+    let meta = inventory::create_credential_set(
+        &conn,
+        &input.name,
+        "SshKey",
+        &vault_ref,
+        Some(&input.username),
+    )
+    .map_err(|e| {
+        vault::delete(&vault_ref).ok();
+        CmdError::from(e)
+    })?;
+
+    audit::log(
+        &conn,
+        &actor,
+        "VLT_GENERATE_KEY",
+        Some(&meta.id),
+        AuditResult::Ok,
+        Some(&input.name),
+    )
+    .ok();
+
+    Ok(GenerateSshKeyResult { credential_set: meta, public_key })
+}
+
+// ── Get public key from stored SshKey credential ──────────────────────────────
+
+#[tauri::command]
+pub fn cmd_get_public_key(
+    state: State<'_, AppState>,
+    cred_id: String,
+) -> CmdResult<String> {
+    state
+        .current_user
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| CmdError { code: "UNAUTHENTICATED", message: "Not logged in".into() })?;
+
+    let conn = state.db.lock().unwrap();
+    let creds = inventory::list_credential_sets(&conn).map_err(CmdError::from)?;
+    let meta = creds
+        .into_iter()
+        .find(|c| c.id == cred_id)
+        .ok_or_else(|| CmdError { code: "NOT_FOUND", message: "Credential not found".into() })?;
+
+    let secret = vault::retrieve(&meta.vault_ref).map_err(CmdError::from)?;
+    let (private_key_pem, passphrase_opt) = match secret {
+        VaultSecret::SshKey { private_key, passphrase, .. } => (private_key, passphrase),
+        _ => {
+            return Err(CmdError {
+                code: "WRONG_KIND",
+                message: "Credential is not an SSH key".into(),
+            })
+        }
+    };
+
+    let pass_str = passphrase_opt.as_deref().map(|p| p.as_str().to_string());
+    let kp = russh::keys::decode_secret_key(&private_key_pem, pass_str.as_deref())
+        .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+
+    let pub_key = kp
+        .clone_public_key()
+        .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+
+    Ok(format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64()))
+}
+
+// ── Deploy public key to a remote machine via SSH ─────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct DeployPublicKeyInput {
+    pub credential_set_id: String,
+    pub target_machine_id: String,
+    pub auth_credential_set_id: String,
+}
+
+#[tauri::command]
+pub async fn cmd_deploy_public_key(
+    state: State<'_, AppState>,
+    input: DeployPublicKeyInput,
+) -> CmdResult<()> {
+    use crate::protocols::ssh::{self, SshAuth};
+
+    state
+        .current_user
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| CmdError { code: "UNAUTHENTICATED", message: "Not logged in".into() })?;
+
+    // Build the public key line
+    let public_key = {
+        let conn = state.db.lock().unwrap();
+        let creds = inventory::list_credential_sets(&conn).map_err(CmdError::from)?;
+        let meta = creds
+            .iter()
+            .find(|c| c.id == input.credential_set_id)
+            .ok_or_else(|| CmdError { code: "NOT_FOUND", message: "SSH key credential not found".into() })?;
+
+        let secret = vault::retrieve(&meta.vault_ref).map_err(CmdError::from)?;
+        let (private_key_pem, passphrase_opt) = match secret {
+            VaultSecret::SshKey { private_key, passphrase, .. } => (private_key, passphrase),
+            _ => return Err(CmdError { code: "WRONG_KIND", message: "Not an SSH key credential".into() }),
+        };
+        let pass_str = passphrase_opt.as_deref().map(|p| p.as_str().to_string());
+        let kp = russh::keys::decode_secret_key(&private_key_pem, pass_str.as_deref())
+            .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+        let pub_key = kp
+            .clone_public_key()
+            .map_err(|e| CmdError { code: "KEY_PARSE_ERROR", message: e.to_string() })?;
+        format!("{} {} WARDEN", pub_key.name(), pub_key.public_key_base64())
+    };
+
+    // Get connection target (host + port) from machine profiles
+    let (host, port, ssh_username, auth) = {
+        let conn = state.db.lock().unwrap();
+        let profiles = inventory::list_profiles(&conn, &input.target_machine_id)
+            .map_err(CmdError::from)?;
+        let profile = profiles
+            .into_iter()
+            .find(|p| p.protocol == "SSH")
+            .ok_or_else(|| CmdError {
+                code: "NO_SSH_PROFILE",
+                message: "Target machine has no SSH connection profile".into(),
+            })?;
+
+        let creds = inventory::list_credential_sets(&conn).map_err(CmdError::from)?;
+        let auth_meta = creds
+            .into_iter()
+            .find(|c| c.id == input.auth_credential_set_id)
+            .ok_or_else(|| CmdError { code: "NOT_FOUND", message: "Auth credential not found".into() })?;
+
+        let secret = vault::retrieve(&auth_meta.vault_ref).map_err(CmdError::from)?;
+        let (username, ssh_auth) = match secret {
+            VaultSecret::Password { username, password } => (username, SshAuth::Password(password)),
+            VaultSecret::SshKey { username, private_key, passphrase } => (
+                username,
+                SshAuth::PublicKey { private_key_pem: private_key, passphrase },
+            ),
+            VaultSecret::Totp { .. } => return Err(CmdError {
+                code: "INVALID_CREDENTIAL",
+                message: "TOTP secret cannot be used as SSH auth".into(),
+            }),
+        };
+
+        (profile.host.clone(), profile.port, username, ssh_auth)
+    };
+
+    // Feed the deploy script to sh via stdin
+    let deploy_script = format!(
+        "mkdir -p ~/.ssh && chmod 700 ~/.ssh && printf '%s\\n' '{key}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys",
+        key = public_key.replace('\'', "'\\''")
+    );
+
+    let (_, stderr, exit) = ssh::run_command(
+        &host,
+        port,
+        &ssh_username,
+        auth,
+        "sh",
+        Some(deploy_script.as_bytes()),
+        None,
+        None,
+    )
+    .await
+    .map_err(|e| CmdError { code: "SSH_ERROR", message: e.to_string() })?;
+
+    if exit != 0 {
+        return Err(CmdError {
+            code: "DEPLOY_FAILED",
+            message: format!("Deploy failed (exit {}): {}", exit, stderr.trim()),
+        });
+    }
 
     Ok(())
 }

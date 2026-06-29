@@ -104,6 +104,10 @@ pub fn run() {
             commands::vault::cmd_list_credential_sets,
             commands::vault::cmd_create_credential_set,
             commands::vault::cmd_delete_credential_set,
+            commands::vault::cmd_upload_ssh_key,
+            commands::vault::cmd_generate_ssh_key,
+            commands::vault::cmd_get_public_key,
+            commands::vault::cmd_deploy_public_key,
             // Sessions
             commands::sessions::cmd_connect_ssh,
             commands::sessions::cmd_connect_telnet,
