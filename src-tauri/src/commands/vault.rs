@@ -301,6 +301,34 @@ pub fn cmd_get_public_key(
     Ok(format!("{} {} WARDEN", pub_key.algorithm().as_str(), pub_key.public_key_base64()))
 }
 
+// ── Credential expiry ─────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn cmd_set_credential_expiry(
+    state: State<'_, AppState>,
+    cred_id: String,
+    expires_at: Option<String>,
+) -> CmdResult<()> {
+    require_admin(&state)?;
+    let conn = state.db.lock().unwrap();
+    inventory::set_credential_expiry(&conn, &cred_id, expires_at.as_deref()).map_err(CmdError::from)
+}
+
+#[tauri::command]
+pub fn cmd_get_expiring_credentials(
+    state: State<'_, AppState>,
+    days: Option<i64>,
+) -> CmdResult<Vec<inventory::CredentialSetMeta>> {
+    state
+        .current_user
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| CmdError { code: "UNAUTHENTICATED", message: "Not logged in".into() })?;
+    let conn = state.db.lock().unwrap();
+    inventory::get_expiring_credentials(&conn, days.unwrap_or(30)).map_err(CmdError::from)
+}
+
 // ── Deploy public key to a remote machine via SSH ─────────────────────────────
 
 #[derive(Debug, Deserialize)]

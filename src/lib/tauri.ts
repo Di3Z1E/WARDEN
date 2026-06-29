@@ -441,6 +441,60 @@ export const controlService = (machineId: string, name: string, action: string, 
 
 // ── Network / diagnostics ─────────────────────────────────────────────────────
 
+// ── Credential expiry ─────────────────────────────────────────────────────────
+
+export const setCredentialExpiry = (credId: string, expiresAt: string | null) =>
+  invoke<void>("cmd_set_credential_expiry", { credId, expiresAt });
+
+export const getExpiringCredentials = (days?: number) =>
+  invoke<import("../types").CredentialSet[]>("cmd_get_expiring_credentials", { days: days ?? 30 });
+
+// ── HTTP monitor ──────────────────────────────────────────────────────────────
+
+import type { HttpMonitor, HttpCheckResult, ScanHost } from "../types";
+
+export const checkHttpEndpoint = (input: {
+  url: string;
+  method?: string;
+  expected_status?: number;
+  match_body?: string | null;
+  timeout_secs?: number;
+}) => invoke<HttpCheckResult>("cmd_check_http_endpoint", input);
+
+export const listHttpMonitors = () =>
+  invoke<HttpMonitor[]>("cmd_list_http_monitors");
+
+export const upsertHttpMonitor = (input: {
+  id?: string;
+  label: string;
+  url: string;
+  method?: string;
+  expected_status?: number;
+  match_body?: string | null;
+  timeout_secs?: number;
+}) => invoke<HttpMonitor>("cmd_upsert_http_monitor", { input });
+
+export const deleteHttpMonitor = (id: string) =>
+  invoke<void>("cmd_delete_http_monitor", { id });
+
+export const refreshHttpMonitor = (id: string) =>
+  invoke<HttpMonitor>("cmd_refresh_http_monitor", { id });
+
+// ── Subnet scanner ────────────────────────────────────────────────────────────
+
+export { type ScanHost };
+
+export const scanSubnet = (input: {
+  cidr: string;
+  ports?: number[];
+  timeout_ms?: number;
+}) => invoke<string>("cmd_scan_subnet", input);
+
+export const cancelScan = (scanId: string) =>
+  invoke<void>("cmd_cancel_scan", { scanId });
+
+// ── Network / diagnostics ─────────────────────────────────────────────────────
+
 export const verifyOsAndResetPassword = (
   osUsername: string,
   osPassword: string,

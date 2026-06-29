@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   Server, Key, Terminal as TerminalIcon, Plus, Search,
-  Clock, Zap, BookOpen, ArrowRight, Lightbulb,
+  Clock, Zap, BookOpen, ArrowRight, Lightbulb, AlertTriangle,
 } from "lucide-react";
 import clsx from "clsx";
 import { useAuthStore, useInventoryStore, useSessionStore, useUiStore } from "../../store";
-import { listCredentialSets, queryAudit } from "../../lib/tauri";
-import type { AuditEvent } from "../../types";
+import { getExpiringCredentials, listCredentialSets, queryAudit } from "../../lib/tauri";
+import type { AuditEvent, CredentialSet } from "../../types";
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -28,9 +28,11 @@ export default function Dashboard() {
   const [credCount, setCredCount] = useState<number | null>(null);
   const [recentEvents, setRecentEvents] = useState<AuditEvent[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [expiringCreds, setExpiringCreds] = useState<CredentialSet[]>([]);
 
   useEffect(() => {
     listCredentialSets().then((c) => setCredCount(c.length)).catch(() => setCredCount(0));
+    getExpiringCredentials(30).then(setExpiringCreds).catch(() => {});
     queryAudit({ action: "SESSION_OPEN", limit: 6 })
       .then(setRecentEvents)
       .catch(() => {})
@@ -76,6 +78,28 @@ export default function Dashboard() {
             pulse={tabs.length > 0}
           />
         </div>
+
+        {/* Credential expiry alert */}
+        {expiringCreds.length > 0 && (
+          <div
+            className="flex items-start gap-3 px-4 py-3 rounded-xl border border-yellow-800/50 bg-yellow-900/10 cursor-pointer hover:bg-yellow-900/20 transition-colors"
+            onClick={() => openModal("credentials")}
+          >
+            <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-yellow-300">
+                {expiringCreds.length} credential{expiringCreds.length !== 1 ? "s" : ""} expiring soon
+              </p>
+              <p className="text-xs text-muted mt-0.5">
+                {expiringCreds.map((c) => {
+                  const days = Math.ceil((new Date(c.expires_at!).getTime() - Date.now()) / 86_400_000);
+                  return days < 0 ? `${c.name} (expired)` : `${c.name} (${days}d)`;
+                }).join(" · ")}
+              </p>
+            </div>
+            <ArrowRight className="w-4 h-4 text-yellow-400/60 ml-auto flex-shrink-0 mt-0.5" />
+          </div>
+        )}
 
         {/* Quick actions */}
         <div>

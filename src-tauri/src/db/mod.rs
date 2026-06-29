@@ -151,7 +151,27 @@ ALTER TABLE credential_sets ADD COLUMN expires_at TEXT;
 
 // ── Migration table ───────────────────────────────────────────────────────────
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, M1), (2, M2), (3, M3)];
+// ── Migration 4 — HTTP endpoint monitors ──────────────────────────────────────
+
+const M4: &str = r#"
+CREATE TABLE IF NOT EXISTS http_monitors (
+    id                TEXT PRIMARY KEY,
+    label             TEXT NOT NULL,
+    url               TEXT NOT NULL,
+    method            TEXT NOT NULL DEFAULT 'GET',
+    expected_status   INTEGER NOT NULL DEFAULT 200,
+    match_body        TEXT,
+    timeout_secs      INTEGER NOT NULL DEFAULT 10,
+    last_checked_at   TEXT,
+    last_status_code  INTEGER,
+    last_latency_ms   INTEGER,
+    last_ok           INTEGER,
+    last_error        TEXT,
+    created_at        TEXT NOT NULL
+);
+"#;
+
+const MIGRATIONS: &[(i64, &str)] = &[(1, M1), (2, M2), (3, M3), (4, M4)];
 
 // ── Public API ────────────────────────────────────────────────────────────────
 

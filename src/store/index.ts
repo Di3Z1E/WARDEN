@@ -108,6 +108,8 @@ export type ModalType =
   | "bulk-exec"
   | "cert-monitor"
   | "monitoring"
+  | "http-monitor"
+  | "scanner"
   | null;
 
 interface UiState {

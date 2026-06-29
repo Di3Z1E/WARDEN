@@ -95,6 +95,7 @@ pub struct CredentialSetMeta {
     pub username: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub expires_at: Option<String>,
 }
 
 // ── Folders ───────────────────────────────────────────────────────────────────
@@ -476,7 +477,7 @@ pub fn update_profile(
 
 pub fn list_credential_sets(conn: &Connection) -> Result<Vec<CredentialSetMeta>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id,name,kind,vault_ref,username,created_at,updated_at
+        "SELECT id,name,kind,vault_ref,username,created_at,updated_at,expires_at
          FROM credential_sets ORDER BY name",
     )?;
     let rows = stmt.query_map([], |r| {
@@ -488,6 +489,7 @@ pub fn list_credential_sets(conn: &Connection) -> Result<Vec<CredentialSetMeta>,
             username: r.get(4)?,
             created_at: r.get(5)?,
             updated_at: r.get(6)?,
+            expires_at: r.get(7)?,
         })
     })?;
     Ok(rows.filter_map(|r| r.ok()).collect())
@@ -515,7 +517,46 @@ pub fn create_credential_set(
         username: username.map(String::from),
         created_at: now.clone(),
         updated_at: now,
+        expires_at: None,
     })
+}
+
+pub fn set_credential_expiry(
+    conn: &Connection,
+    id: &str,
+    expires_at: Option<&str>,
+) -> Result<(), AppError> {
+    conn.execute(
+        "UPDATE credential_sets SET expires_at=?1, updated_at=datetime('now') WHERE id=?2",
+        params![expires_at, id],
+    )?;
+    Ok(())
+}
+
+pub fn get_expiring_credentials(
+    conn: &Connection,
+    days: i64,
+) -> Result<Vec<CredentialSetMeta>, AppError> {
+    let threshold = format!("+{days} days");
+    let mut stmt = conn.prepare(
+        "SELECT id,name,kind,vault_ref,username,created_at,updated_at,expires_at
+         FROM credential_sets
+         WHERE expires_at IS NOT NULL AND date(expires_at) <= date('now', ?1)
+         ORDER BY expires_at ASC",
+    )?;
+    let rows = stmt.query_map(params![threshold], |r| {
+        Ok(CredentialSetMeta {
+            id: r.get(0)?,
+            name: r.get(1)?,
+            kind: r.get(2)?,
+            vault_ref: r.get(3)?,
+            username: r.get(4)?,
+            created_at: r.get(5)?,
+            updated_at: r.get(6)?,
+            expires_at: r.get(7)?,
+        })
+    })?;
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
 pub fn delete_credential_set(conn: &Connection, id: &str) -> Result<String, AppError> {

@@ -12,6 +12,8 @@ import ScriptLibrary from "../ScriptLibrary/ScriptLibrary";
 import BulkExec from "../BulkExec/BulkExec";
 import CertMonitor from "../CertMonitor/CertMonitor";
 import MonitoringPanel from "../Monitoring/MonitoringPanel";
+import HttpMonitorPanel from "../HttpMonitor/HttpMonitor";
+import NetworkScanner from "../NetworkScanner/NetworkScanner";
 
 export default function Modals() {
   const { modal, closeModal } = useUiStore();
@@ -37,6 +39,8 @@ export default function Modals() {
   if (modal === "bulk-exec")     return <BulkExec onClose={closeModal} />;
   if (modal === "cert-monitor")  return <CertMonitor onClose={closeModal} />;
   if (modal === "monitoring")    return <MonitoringPanel onClose={closeModal} />;
+  if (modal === "http-monitor")  return <HttpMonitorPanel onClose={closeModal} />;
+  if (modal === "scanner")       return <NetworkScanner onClose={closeModal} />;
 
   return null;
 }

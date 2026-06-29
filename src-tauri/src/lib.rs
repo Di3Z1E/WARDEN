@@ -38,6 +38,8 @@ pub struct AppState {
     pub tail_tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
     /// In-flight MFA challenges: ephemeral_token → PendingMfa (5-min TTL).
     pub pending_mfa: Mutex<HashMap<String, PendingMfa>>,
+    /// Running subnet scan tasks keyed by scan UUID — abortable on cancel.
+    pub scan_tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
 }
 
 pub fn run() {
@@ -63,6 +65,7 @@ pub fn run() {
                 current_user: Mutex::new(None),
                 tail_tasks: Mutex::new(HashMap::new()),
                 pending_mfa: Mutex::new(HashMap::new()),
+                scan_tasks: Mutex::new(HashMap::new()),
             };
 
             app.manage(state);
@@ -171,6 +174,18 @@ pub fn run() {
             commands::monitoring::cmd_upsert_monitor_rule,
             commands::monitoring::cmd_get_monitor_rule,
             commands::monitoring::cmd_export_ansible_inventory,
+            // HTTP endpoint monitor
+            commands::http_monitor::cmd_check_http_endpoint,
+            commands::http_monitor::cmd_list_http_monitors,
+            commands::http_monitor::cmd_upsert_http_monitor,
+            commands::http_monitor::cmd_delete_http_monitor,
+            commands::http_monitor::cmd_refresh_http_monitor,
+            // Subnet scanner
+            commands::scanner::cmd_scan_subnet,
+            commands::scanner::cmd_cancel_scan,
+            // Credential expiry
+            commands::vault::cmd_set_credential_expiry,
+            commands::vault::cmd_get_expiring_credentials,
         ])
         .run(tauri::generate_context!())
         .expect("error while running WARDEN");

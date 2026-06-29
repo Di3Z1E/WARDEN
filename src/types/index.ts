@@ -89,6 +89,7 @@ export interface CredentialSet {
   username: string | null;
   created_at: string;
   updated_at: string;
+  expires_at: string | null;
 }
 
 export interface GenerateSshKeyResult {
@@ -239,6 +240,40 @@ export interface ServiceInfo {
   display_name: string;
   status: string;
   start_type: string;
+}
+
+// ── HTTP monitor ──────────────────────────────────────────────────────────────
+
+export interface HttpMonitor {
+  id: string;
+  label: string;
+  url: string;
+  method: string;
+  expected_status: number;
+  match_body: string | null;
+  timeout_secs: number;
+  last_checked_at: string | null;
+  last_status_code: number | null;
+  last_latency_ms: number | null;
+  last_ok: boolean | null;
+  last_error: string | null;
+  created_at: string;
+}
+
+export interface HttpCheckResult {
+  url: string;
+  status_code: number | null;
+  latency_ms: number;
+  ok: boolean;
+  error: string | null;
+}
+
+// ── Network scanner ───────────────────────────────────────────────────────────
+
+export interface ScanHost {
+  ip: string;
+  open_ports: number[];
+  latency_ms: number;
 }
 
 // ── API response wrapper ──────────────────────────────────────────────────────

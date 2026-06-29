@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  CalendarClock,
   Check,
   Clipboard,
   Key,
@@ -17,6 +18,7 @@ import {
   getPublicKey,
   listCredentialSets,
   listMachines,
+  setCredentialExpiry,
 } from "../../lib/tauri";
 import { useUiStore } from "../../store";
 import type { CredentialSet, Machine } from "../../types";
@@ -33,6 +35,8 @@ export default function CredentialManagerModal() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deployingId, setDeployingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expiryEditId, setExpiryEditId] = useState<string | null>(null);
+  const [expiryValue, setExpiryValue] = useState<string>("");
 
   // Deploy dialog state
   const [deployTarget, setDeployTarget] = useState<string>("");
@@ -85,6 +89,21 @@ export default function CredentialManagerModal() {
       setDeployError((err as { message?: string })?.message ?? "Deploy failed");
     } finally {
       setDeployBusy(false);
+    }
+  }
+
+  function openExpiryEdit(cred: CredentialSet) {
+    setExpiryEditId(cred.id);
+    setExpiryValue(cred.expires_at ? cred.expires_at.substring(0, 10) : "");
+  }
+
+  async function saveExpiry(credId: string) {
+    try {
+      await setCredentialExpiry(credId, expiryValue || null);
+      setExpiryEditId(null);
+      load();
+    } catch (err: unknown) {
+      alert((err as { message?: string })?.message ?? "Failed to set expiry");
     }
   }
 
@@ -175,8 +194,17 @@ export default function CredentialManagerModal() {
 
                 <KindBadge kind={cred.kind} />
 
+                <ExpiryBadge expiresAt={cred.expires_at} />
+
                 {/* Actions */}
                 <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  <ActionButton
+                    title="Set expiry date"
+                    onClick={() => expiryEditId === cred.id ? setExpiryEditId(null) : openExpiryEdit(cred)}
+                    active={expiryEditId === cred.id}
+                  >
+                    <CalendarClock className="w-3.5 h-3.5" />
+                  </ActionButton>
                   {cred.kind === "SshKey" && (
                     <>
                       <ActionButton
@@ -216,6 +244,31 @@ export default function CredentialManagerModal() {
                   </ActionButton>
                 </div>
               </div>
+
+              {/* Expiry panel */}
+              {expiryEditId === cred.id && (
+                <div className="border-t border-surface-600 px-4 py-3 bg-surface-700 flex items-center gap-3">
+                  <CalendarClock className="w-3.5 h-3.5 text-muted flex-shrink-0" />
+                  <div className="flex-1">
+                    <label className="text-xs text-muted block mb-1">Expiry date (leave blank to clear)</label>
+                    <input
+                      type="date"
+                      value={expiryValue}
+                      onChange={(e) => setExpiryValue(e.target.value)}
+                      className="bg-surface-600 border border-surface-500 rounded-md px-2 py-1 text-xs text-gray-100 focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <button
+                    onClick={() => saveExpiry(cred.id)}
+                    className="px-3 py-1.5 rounded-md bg-accent hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button onClick={() => setExpiryEditId(null)} className="text-xs text-muted hover:text-gray-300">
+                    Cancel
+                  </button>
+                </div>
+              )}
 
               {/* Deploy panel */}
               {deployingId === cred.id && (
@@ -321,6 +374,25 @@ function KindBadge({ kind }: { kind: string }) {
   return (
     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${map[kind] ?? map.Password}`}>
       {labels[kind] ?? kind}
+    </span>
+  );
+}
+
+function ExpiryBadge({ expiresAt }: { expiresAt: string | null }) {
+  if (!expiresAt) return null;
+  const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000);
+  const expired = days < 0;
+  const urgent  = !expired && days <= 7;
+  const warn    = !expired && !urgent && days <= 30;
+  const label   = expired ? "Expired" : `${days}d`;
+  const cls     = expired || urgent
+    ? "bg-red-900/30 text-red-300 border-red-800/50"
+    : warn
+    ? "bg-yellow-900/30 text-yellow-300 border-yellow-800/50"
+    : "bg-surface-600 text-muted border-surface-500";
+  return (
+    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${cls}`} title={expiresAt}>
+      {label}
     </span>
   );
 }
