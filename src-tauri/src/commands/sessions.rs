@@ -111,6 +111,10 @@ pub async fn cmd_connect_ssh(
                     passphrase,
                 },
             ),
+            VaultSecret::Totp { .. } => return Err(CmdError {
+                code: "INVALID_CREDENTIAL",
+                message: "TOTP secrets cannot be used as SSH credentials".into(),
+            }),
         };
 
         (profile, machine_id, username, auth)
@@ -285,6 +289,12 @@ pub async fn cmd_connect_rdp(
                 return Err(CmdError {
                     code: "WRONG_CRED_TYPE",
                     message: "RDP requires a password credential, not an SSH key".into(),
+                });
+            }
+            VaultSecret::Totp { .. } => {
+                return Err(CmdError {
+                    code: "INVALID_CREDENTIAL",
+                    message: "TOTP secrets cannot be used as RDP credentials".into(),
                 });
             }
         };

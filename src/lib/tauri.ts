@@ -8,8 +8,11 @@ import type {
   CredentialSet,
   CurrentUser,
   Folder,
+  LoginResult,
   Machine,
   MachineType,
+  MfaProvisionResult,
+  MfaStatus,
   Protocol,
   Script,
   ScriptLanguage,
@@ -26,9 +29,25 @@ export const setupAdmin = (username: string, password: string) =>
   invoke<AppUser>("cmd_setup_admin", { input: { username, password } });
 
 export const login = (username: string, password: string) =>
-  invoke<{ user: CurrentUser }>("cmd_login", {
-    input: { username, password },
-  });
+  invoke<LoginResult>("cmd_login", { input: { username, password } });
+
+export const loginMfa = (ephemeralToken: string, code: string) =>
+  invoke<CurrentUser>("cmd_login_mfa", { input: { ephemeral_token: ephemeralToken, code } });
+
+export const getMfaStatus = () =>
+  invoke<MfaStatus>("cmd_get_mfa_status");
+
+export const mfaProvision = () =>
+  invoke<MfaProvisionResult>("cmd_mfa_provision");
+
+export const mfaVerifyAndEnable = (code: string) =>
+  invoke<void>("cmd_mfa_verify_and_enable", { input: { code } });
+
+export const mfaDisable = (currentPassword: string) =>
+  invoke<void>("cmd_mfa_disable", { input: { current_password: currentPassword } });
+
+export const adminResetMfa = (userId: string) =>
+  invoke<void>("cmd_admin_reset_mfa", { input: { user_id: userId } });
 
 export const logout = () => invoke<void>("cmd_logout");
 

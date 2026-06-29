@@ -28,6 +28,9 @@ pub enum VaultSecret {
         private_key: Zeroizing<String>,
         passphrase: Option<Zeroizing<String>>,
     },
+    Totp {
+        secret_base32: Zeroizing<String>,
+    },
 }
 
 /// Generate a fresh vault reference UUID.
@@ -60,6 +63,7 @@ pub fn store(vault_ref: &str, secret: &VaultSecret) -> Result<(), AppError> {
     let username_str = match secret {
         VaultSecret::Password { username, .. } => username.clone(),
         VaultSecret::SshKey { username, .. } => username.clone(),
+        VaultSecret::Totp { .. } => "warden-mfa".to_string(),
     };
     let username_w: Vec<u16> = username_str
         .encode_utf16()

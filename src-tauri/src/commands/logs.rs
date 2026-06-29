@@ -58,6 +58,10 @@ fn resolve_ssh_creds(state: &AppState, machine_id: &str) -> Result<SshCreds, Cmd
         VaultSecret::SshKey { username, private_key, passphrase } => {
             (username, SshAuth::PublicKey { private_key_pem: private_key, passphrase })
         }
+        VaultSecret::Totp { .. } => return Err(CmdError {
+            code: "INVALID_CREDENTIAL",
+            message: "TOTP secrets cannot be used as SSH credentials".into(),
+        }),
     };
     Ok(SshCreds { host: profile.host, port: profile.port, username, auth })
 }

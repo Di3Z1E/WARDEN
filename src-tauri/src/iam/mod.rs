@@ -57,6 +57,7 @@ pub struct AppUser {
     pub username: String,
     pub role: Role,
     pub mfa_secret_ref: Option<String>,
+    pub mfa_enabled: bool,
     pub status: String,
     pub created_at: String,
     pub updated_at: String,
@@ -68,6 +69,7 @@ pub struct AuthenticatedUser {
     pub id: String,
     pub username: String,
     pub role: Role,
+    pub mfa_enabled: bool,
 }
 
 // ── Password hashing ─────────────────────────────────────────────────────────
@@ -120,6 +122,7 @@ pub fn create_user(
         username: username.to_string(),
         role,
         mfa_secret_ref: None,
+        mfa_enabled: false,
         status: "active".to_string(),
         created_at: now.clone(),
         updated_at: now,
@@ -133,7 +136,7 @@ pub fn authenticate(
 ) -> Result<AuthenticatedUser, AppError> {
     let row = conn
         .query_row(
-            "SELECT id, username, password_hash, role, status
+            "SELECT id, username, password_hash, role, status, mfa_enabled
              FROM app_users WHERE username=?1",
             params![username],
             |r| {
@@ -143,12 +146,13 @@ pub fn authenticate(
                     r.get::<_, String>(2)?,
                     r.get::<_, String>(3)?,
                     r.get::<_, String>(4)?,
+                    r.get::<_, i64>(5)?,
                 ))
             },
         )
         .map_err(|_| AppError::AuthFailed("Invalid username or password".into()))?;
 
-    let (id, uname, hash, role_str, status) = row;
+    let (id, uname, hash, role_str, status, mfa_enabled_int) = row;
 
     if status != "active" {
         return Err(AppError::AuthFailed("Account is disabled".into()));
@@ -165,34 +169,36 @@ pub fn authenticate(
         id,
         username: uname,
         role,
+        mfa_enabled: mfa_enabled_int != 0,
     })
 }
 
 pub fn list_users(conn: &Connection) -> Result<Vec<AppUser>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id,username,role,mfa_secret_ref,status,created_at,updated_at
+        "SELECT id,username,role,mfa_secret_ref,mfa_enabled,status,created_at,updated_at
          FROM app_users ORDER BY username",
     )?;
     let users = stmt
         .query_map([], |r| {
-            let role_str: String = r.get(2)?;
             Ok((
                 r.get::<_, String>(0)?,
                 r.get::<_, String>(1)?,
-                role_str,
+                r.get::<_, String>(2)?,
                 r.get::<_, Option<String>>(3)?,
-                r.get::<_, String>(4)?,
+                r.get::<_, i64>(4)?,
                 r.get::<_, String>(5)?,
                 r.get::<_, String>(6)?,
+                r.get::<_, String>(7)?,
             ))
         })?
         .filter_map(|row| {
-            row.ok().and_then(|(id, username, role_str, mfa, status, ca, ua)| {
+            row.ok().and_then(|(id, username, role_str, mfa_ref, mfa_en, status, ca, ua)| {
                 Role::from_name(&role_str).map(|role| AppUser {
                     id,
                     username,
                     role,
-                    mfa_secret_ref: mfa,
+                    mfa_secret_ref: mfa_ref,
+                    mfa_enabled: mfa_en != 0,
                     status,
                     created_at: ca,
                     updated_at: ua,
@@ -205,7 +211,7 @@ pub fn list_users(conn: &Connection) -> Result<Vec<AppUser>, AppError> {
 
 pub fn get_user_by_id(conn: &Connection, id: &str) -> Result<AppUser, AppError> {
     conn.query_row(
-        "SELECT id,username,role,mfa_secret_ref,status,created_at,updated_at
+        "SELECT id,username,role,mfa_secret_ref,mfa_enabled,status,created_at,updated_at
          FROM app_users WHERE id=?1",
         params![id],
         |r| {
@@ -214,21 +220,23 @@ pub fn get_user_by_id(conn: &Connection, id: &str) -> Result<AppUser, AppError> 
                 r.get::<_, String>(1)?,
                 r.get::<_, String>(2)?,
                 r.get::<_, Option<String>>(3)?,
-                r.get::<_, String>(4)?,
+                r.get::<_, i64>(4)?,
                 r.get::<_, String>(5)?,
                 r.get::<_, String>(6)?,
+                r.get::<_, String>(7)?,
             ))
         },
     )
     .map_err(|_| AppError::NotFound(format!("User not found: {}", id)))
-    .and_then(|(id, username, role_str, mfa, status, ca, ua)| {
+    .and_then(|(id, username, role_str, mfa_ref, mfa_en, status, ca, ua)| {
         Role::from_name(&role_str)
             .ok_or_else(|| AppError::Other("Unknown role".into()))
             .map(|role| AppUser {
                 id,
                 username,
                 role,
-                mfa_secret_ref: mfa,
+                mfa_secret_ref: mfa_ref,
+                mfa_enabled: mfa_en != 0,
                 status,
                 created_at: ca,
                 updated_at: ua,
@@ -303,5 +311,44 @@ pub fn update_username(
         }
         other => AppError::Db(other),
     })?;
+    Ok(())
+}
+
+// ── MFA helpers ───────────────────────────────────────────────────────────────
+
+/// Returns `(mfa_secret_ref, mfa_enabled)` for the given user.
+pub fn get_mfa_row(conn: &Connection, user_id: &str) -> Result<(Option<String>, bool), AppError> {
+    conn.query_row(
+        "SELECT mfa_secret_ref, mfa_enabled FROM app_users WHERE id=?1",
+        params![user_id],
+        |r| Ok((r.get::<_, Option<String>>(0)?, r.get::<_, i64>(1)?)),
+    )
+    .map(|(ref_opt, en)| (ref_opt, en != 0))
+    .map_err(|_| AppError::NotFound(format!("User not found: {}", user_id)))
+}
+
+pub fn set_mfa_secret_ref(
+    conn: &Connection,
+    user_id: &str,
+    vault_ref: Option<&str>,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE app_users SET mfa_secret_ref=?1, updated_at=?2 WHERE id=?3",
+        params![vault_ref, now, user_id],
+    )?;
+    Ok(())
+}
+
+pub fn set_mfa_enabled(
+    conn: &Connection,
+    user_id: &str,
+    enabled: bool,
+) -> Result<(), AppError> {
+    let now = Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE app_users SET mfa_enabled=?1, updated_at=?2 WHERE id=?3",
+        params![enabled as i64, now, user_id],
+    )?;
     Ok(())
 }

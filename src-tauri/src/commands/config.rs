@@ -118,6 +118,7 @@ pub async fn cmd_export_config(
                 Some(private_key.as_str().to_owned()),
                 passphrase.as_ref().map(|p| p.as_str().to_owned()),
             ),
+            VaultSecret::Totp { .. } => continue,
         };
         credentials.push(CredentialExport {
             original_id: meta.id.clone(),

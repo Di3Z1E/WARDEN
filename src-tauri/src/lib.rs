@@ -18,6 +18,12 @@ use tauri::Manager;
 
 use crate::protocols::{sftp::SftpEntry, SessionHandle};
 
+/// Ephemeral MFA challenge: lives in memory only for 5 minutes after password check.
+pub struct PendingMfa {
+    pub user: iam::AuthenticatedUser,
+    pub expires_at: std::time::Instant,
+}
+
 /// Shared application state — managed by Tauri, accessible in every command.
 pub struct AppState {
     /// Opened SQLite connection (single writer, mutex-guarded).
@@ -30,6 +36,8 @@ pub struct AppState {
     pub current_user: Mutex<Option<iam::AuthenticatedUser>>,
     /// Background log-tail tasks keyed by tail UUID — abort handle to stop streaming.
     pub tail_tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
+    /// In-flight MFA challenges: ephemeral_token → PendingMfa (5-min TTL).
+    pub pending_mfa: Mutex<HashMap<String, PendingMfa>>,
 }
 
 pub fn run() {
@@ -54,12 +62,20 @@ pub fn run() {
                 sftp_sessions: Mutex::new(HashMap::new()),
                 current_user: Mutex::new(None),
                 tail_tasks: Mutex::new(HashMap::new()),
+                pending_mfa: Mutex::new(HashMap::new()),
             };
 
             app.manage(state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // MFA
+            commands::mfa::cmd_mfa_provision,
+            commands::mfa::cmd_mfa_verify_and_enable,
+            commands::mfa::cmd_mfa_disable,
+            commands::mfa::cmd_login_mfa,
+            commands::mfa::cmd_get_mfa_status,
+            commands::mfa::cmd_admin_reset_mfa,
             // IAM
             commands::iam::cmd_first_run_check,
             commands::iam::cmd_setup_admin,

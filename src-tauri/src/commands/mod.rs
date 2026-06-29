@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod logs;
+pub mod mfa;
 pub mod sysinfo;
 pub mod certs;
 pub mod monitoring;

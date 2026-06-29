@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Shield, Eye, EyeOff, LogIn, KeyRound, ArrowLeft, CheckCircle } from "lucide-react";
-import { login } from "../../lib/tauri";
-import { verifyOsAndResetPassword } from "../../lib/tauri";
+import { Shield, Eye, EyeOff, LogIn, KeyRound, ArrowLeft, CheckCircle, Smartphone } from "lucide-react";
+import { login, loginMfa, verifyOsAndResetPassword } from "../../lib/tauri";
 import { useAuthStore } from "../../store";
 
 const LETTERS = "WARDEN".split("");
 
-type Mode = "login" | "forgot-os" | "forgot-new";
+type Mode = "login" | "mfa" | "forgot-os" | "forgot-new";
 
 export default function LoginModal() {
   const { setUser } = useAuthStore();
@@ -18,8 +17,13 @@ export default function LoginModal() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Forgot password state
+  // MFA state
   const [mode, setMode] = useState<Mode>("login");
+  const [ephemeralToken, setEphemeralToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const mfaInputRef = useRef<HTMLInputElement>(null);
+
+  // Forgot password state
   const [osUsername, setOsUsername] = useState("");
   const [osPassword, setOsPassword] = useState("");
   const [showOsPass, setShowOsPass] = useState(false);
@@ -39,6 +43,12 @@ export default function LoginModal() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
+  useEffect(() => {
+    if (mode === "mfa") {
+      setTimeout(() => mfaInputRef.current?.focus(), 50);
+    }
+  }, [mode]);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     if (!username || !password) return;
@@ -46,12 +56,40 @@ export default function LoginModal() {
     setLoading(true);
     try {
       const res = await login(username, password);
-      setUser(res.user);
+      if (res.status === "ok") {
+        setUser(res.user);
+      } else {
+        setEphemeralToken(res.ephemeral_token);
+        setMfaCode("");
+        setMode("mfa");
+      }
     } catch (err: unknown) {
       setError((err as { message?: string })?.message ?? "Invalid credentials");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleMfa(e: React.FormEvent) {
+    e.preventDefault();
+    if (mfaCode.length !== 6) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const user = await loginMfa(ephemeralToken, mfaCode);
+      setUser(user);
+    } catch (err: unknown) {
+      setError((err as { message?: string })?.message ?? "Invalid code");
+      setMfaCode("");
+      mfaInputRef.current?.focus();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleMfaCodeChange(val: string) {
+    const digits = val.replace(/\D/g, "").slice(0, 6);
+    setMfaCode(digits);
   }
 
   async function handleOsVerify(e: React.FormEvent) {
@@ -60,7 +98,6 @@ export default function LoginModal() {
     setForgotError(null);
     setForgotLoading(true);
     try {
-      // Just advance to next step — actual verification happens on final submit
       setMode("forgot-new");
     } finally {
       setForgotLoading(false);
@@ -85,12 +122,15 @@ export default function LoginModal() {
 
   function goBack() {
     setMode("login");
+    setError(null);
     setForgotError(null);
     setResetDone(false);
     setOsUsername("");
     setOsPassword("");
     setNewPass("");
     setNewPass2("");
+    setMfaCode("");
+    setEphemeralToken("");
   }
 
   return (
@@ -120,7 +160,6 @@ export default function LoginModal() {
 
         {/* Logo + WARDEN letters */}
         <div className="text-center flex flex-col items-center gap-4">
-          {/* Pulsing shield */}
           <div className="relative flex items-center justify-center">
             <div className="pulse-ring-1 absolute w-14 h-14 rounded-2xl border border-accent/40" />
             <div className="pulse-ring-2 absolute w-14 h-14 rounded-2xl border border-accent/25" />
@@ -130,7 +169,6 @@ export default function LoginModal() {
             </div>
           </div>
 
-          {/* Animated WARDEN letters */}
           <div className="flex items-center gap-[3px]">
             {LETTERS.map((letter, i) => (
               <span
@@ -147,14 +185,14 @@ export default function LoginModal() {
           </p>
         </div>
 
-        {/* Login / Forgot card */}
+        {/* Login / MFA / Forgot card */}
         <div className="login-card-anim w-full">
           <div className="bg-surface-800/70 backdrop-blur-xl border border-surface-600/60 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
 
-            {/* Top accent line */}
             <div className="h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
 
             <div className="p-6">
+              {/* ── Login ── */}
               {mode === "login" && (
                 <>
                   <h2 className="text-sm font-semibold text-gray-200 mb-5">Sign in to continue</h2>
@@ -231,6 +269,66 @@ export default function LoginModal() {
                 </>
               )}
 
+              {/* ── MFA code step ── */}
+              {mode === "mfa" && (
+                <>
+                  <div className="flex items-center gap-2 mb-5">
+                    <button onClick={goBack} className="text-muted hover:text-gray-300 transition-colors">
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                    <div>
+                      <h2 className="text-sm font-semibold text-gray-200">Two-factor authentication</h2>
+                      <p className="text-[11px] text-muted mt-0.5">Enter the 6-digit code from your authenticator app</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleMfa} className="space-y-4">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center">
+                        <Smartphone className="w-6 h-6 text-accent" />
+                      </div>
+                      <input
+                        ref={mfaInputRef}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={mfaCode}
+                        onChange={(e) => handleMfaCodeChange(e.target.value)}
+                        placeholder="000000"
+                        maxLength={6}
+                        className="w-44 text-center text-2xl font-mono tracking-[0.5em] bg-surface-700/80 border border-surface-600 rounded-lg px-3 py-3 text-gray-100 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/20 placeholder-muted/30 transition-all"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="flex items-center gap-2 text-xs text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading || mfaCode.length !== 6}
+                      className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm py-2.5 rounded-lg transition-colors font-medium shadow-lg shadow-accent/20"
+                    >
+                      {loading ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Verifying…
+                        </>
+                      ) : (
+                        <>
+                          <LogIn className="w-3.5 h-3.5" />
+                          Verify
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </>
+              )}
+
+              {/* ── Forgot: OS verify ── */}
               {mode === "forgot-os" && (
                 <>
                   <div className="flex items-center gap-2 mb-5">
@@ -300,6 +398,7 @@ export default function LoginModal() {
                 </>
               )}
 
+              {/* ── Forgot: set new password ── */}
               {mode === "forgot-new" && !resetDone && (
                 <>
                   <div className="flex items-center gap-2 mb-5">
@@ -380,7 +479,6 @@ export default function LoginModal() {
               )}
             </div>
 
-            {/* Bottom accent line */}
             <div className="h-px bg-gradient-to-r from-transparent via-surface-600/60 to-transparent" />
           </div>
         </div>

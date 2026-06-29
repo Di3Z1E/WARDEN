@@ -7,6 +7,7 @@ export interface AppUser {
   username: string;
   role: Role;
   mfa_secret_ref: string | null;
+  mfa_enabled: boolean;
   status: "active" | "disabled";
   created_at: string;
   updated_at: string;
@@ -16,6 +17,21 @@ export interface CurrentUser {
   id: string;
   username: string;
   role: Role;
+  mfa_enabled: boolean;
+}
+
+export type LoginResult =
+  | { status: "ok"; user: CurrentUser }
+  | { status: "mfa_required"; ephemeral_token: string };
+
+export interface MfaProvisionResult {
+  otpauth_url: string;
+  qr_png_base64: string;
+}
+
+export interface MfaStatus {
+  enabled: boolean;
+  provisioned: boolean;
 }
 
 // ── Inventory ─────────────────────────────────────────────────────────────────

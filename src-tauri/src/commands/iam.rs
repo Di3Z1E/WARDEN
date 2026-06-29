@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use uuid::Uuid;
+
 use crate::{
     audit::{self, AuditResult},
     db,
     error::{CmdError, CmdResult},
     iam::{self, AppUser, AuthenticatedUser, Role},
-    AppState,
+    AppState, PendingMfa,
 };
 
 fn require_auth(state: &AppState) -> Result<AuthenticatedUser, CmdError> {
@@ -84,8 +86,10 @@ pub struct LoginInput {
 }
 
 #[derive(Debug, Serialize)]
-pub struct LoginResponse {
-    pub user: AppUserDto,
+#[serde(tag = "status", rename_all = "snake_case")]
+pub enum LoginResult {
+    Ok { user: AppUserDto },
+    MfaRequired { ephemeral_token: String },
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -93,6 +97,7 @@ pub struct AppUserDto {
     pub id: String,
     pub username: String,
     pub role: String,
+    pub mfa_enabled: bool,
 }
 
 impl From<&AuthenticatedUser> for AppUserDto {
@@ -101,6 +106,7 @@ impl From<&AuthenticatedUser> for AppUserDto {
             id: u.id.clone(),
             username: u.username.clone(),
             role: u.role.as_str().to_string(),
+            mfa_enabled: u.mfa_enabled,
         }
     }
 }
@@ -109,15 +115,43 @@ impl From<&AuthenticatedUser> for AppUserDto {
 pub fn cmd_login(
     state: State<'_, AppState>,
     input: LoginInput,
-) -> CmdResult<LoginResponse> {
+) -> CmdResult<LoginResult> {
     let conn = state.db.lock().unwrap();
 
     match iam::authenticate(&conn, &input.username, &input.password) {
         Ok(auth_user) => {
-            audit::log(&conn, &input.username, "AUTH_LOGIN", None, AuditResult::Ok, None).ok();
-            let dto = AppUserDto::from(&auth_user);
-            *state.current_user.lock().unwrap() = Some(auth_user);
-            Ok(LoginResponse { user: dto })
+            if auth_user.mfa_enabled {
+                let token = Uuid::new_v4().to_string();
+                let expires_at =
+                    std::time::Instant::now() + std::time::Duration::from_secs(300);
+                state.pending_mfa.lock().unwrap().insert(
+                    token.clone(),
+                    PendingMfa { user: auth_user, expires_at },
+                );
+                audit::log(
+                    &conn,
+                    &input.username,
+                    "AUTH_LOGIN_MFA_PENDING",
+                    None,
+                    AuditResult::Ok,
+                    None,
+                )
+                .ok();
+                Ok(LoginResult::MfaRequired { ephemeral_token: token })
+            } else {
+                audit::log(
+                    &conn,
+                    &input.username,
+                    "AUTH_LOGIN",
+                    None,
+                    AuditResult::Ok,
+                    None,
+                )
+                .ok();
+                let dto = AppUserDto::from(&auth_user);
+                *state.current_user.lock().unwrap() = Some(auth_user);
+                Ok(LoginResult::Ok { user: dto })
+            }
         }
         Err(e) => {
             audit::log(
@@ -297,6 +331,7 @@ pub fn cmd_update_own_profile(
             id: u.id,
             username: u.username,
             role: u.role.as_str().to_string(),
+            mfa_enabled: u.mfa_enabled,
         }
     }; // conn lock released
 

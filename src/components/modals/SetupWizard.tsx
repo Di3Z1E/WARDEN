@@ -42,7 +42,7 @@ export default function SetupWizard() {
     try {
       const res = await login(username, password);
       setFirstRun(false);
-      setUser(res.user);
+      if (res.status === "ok") setUser(res.user);
     } catch (err) {
       console.error("Auto-login after setup failed:", err);
       setFirstRun(false);

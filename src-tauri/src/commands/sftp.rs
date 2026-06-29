@@ -103,6 +103,10 @@ pub async fn cmd_connect_sftp(
                     passphrase,
                 },
             ),
+            VaultSecret::Totp { .. } => return Err(CmdError {
+                code: "INVALID_CREDENTIAL",
+                message: "TOTP secrets cannot be used as SFTP credentials".into(),
+            }),
         };
 
         (profile, machine_id, username, auth)

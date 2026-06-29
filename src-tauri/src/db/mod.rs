@@ -142,9 +142,16 @@ CREATE TABLE IF NOT EXISTS monitor_events (
 CREATE INDEX IF NOT EXISTS idx_monitor_events_machine ON monitor_events(machine_id, ts);
 "#;
 
+// ── Migration 3 — MFA + credential expiry ────────────────────────────────────
+
+const M3: &str = r#"
+ALTER TABLE app_users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE credential_sets ADD COLUMN expires_at TEXT;
+"#;
+
 // ── Migration table ───────────────────────────────────────────────────────────
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, M1), (2, M2)];
+const MIGRATIONS: &[(i64, &str)] = &[(1, M1), (2, M2), (3, M3)];
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
