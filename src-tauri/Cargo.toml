@@ -85,7 +85,7 @@ tokio-rustls = "0.26"
 
 # Certificate parsing (extract SubjectPublicKey for CredSSP channel binding)
 x509-cert = "0.2"
-der = "0.7"
+der = "0.8"
 
 # Image encoding (RDP frame compression + SFTP thumbnail)
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
