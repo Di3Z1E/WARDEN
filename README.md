@@ -7,7 +7,7 @@
 <br/>
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D4?style=for-the-badge&logo=windows&labelColor=1a1a1a)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/version-0.5.0-60a5fa?style=for-the-badge&labelColor=1a1a1a)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.6.0-60a5fa?style=for-the-badge&labelColor=1a1a1a)](CHANGELOG.md)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?style=for-the-badge&logo=tauri&labelColor=1a1a1a)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-1.87-CE422B?style=for-the-badge&logo=rust&labelColor=1a1a1a)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&labelColor=1a1a1a)](https://react.dev)
@@ -26,7 +26,7 @@
 **WARDEN** is a native Windows desktop application that consolidates IT infrastructure management into a single, secure interface. It replaces the fragmented toolset of `mstsc.exe`, standalone SSH clients, browser tabs, and credential spreadsheets with one coherent console built on hardened security principles.
 
 > [!NOTE]
-> **0.5.0: Full-featured IT console.** This release ships everything from core IAM and protocol support through live SSH session panels, MFA/TOTP, SSH key management, script automation, certificate monitoring, and per-machine TCP liveness monitoring — all inside one native exe, backed by Windows Credential Manager and a tamper-evident audit log.
+> **0.6.0: Network Visibility.** This release adds HTTP/HTTPS endpoint health monitoring with body-match checks, a live subnet scanner that streams discovered hosts and imports them into inventory in one click, and credential expiry tracking with dashboard alerts. Built on top of the full v0.5.0 feature set: MFA/TOTP, SSH key management, script automation, certificate monitoring, live SSH session panels, and per-machine TCP liveness monitoring.
 
 ---
 
@@ -37,6 +37,11 @@
 - 🟢 **SSH**: russh 0.60. Full PTY, terminal resize, password auth, public key auth. In-session panels: live system metrics, process manager, service manager, event log viewer, and live log tail.
 - 🟡 **Telnet**: async Tokio TCP with IAC option negotiation and clean output stripping.
 - 🩵 **SFTP**: russh-sftp file browser. Breadcrumb navigation, upload, download, mkdir, rename, delete. Symlink display.
+
+### 🌐 Network Visibility
+- **HTTP/HTTPS health monitoring**: probe any endpoint with configurable method, expected status, body-match, and timeout. Persisted watch list with live status dots, latency, and on-demand refresh.
+- **Subnet scanner**: enter a CIDR range (`/8`–`/30`), scan 9 common ports concurrently, see results stream in live. One-click import of any discovered host into inventory.
+- **Credential expiry tracking**: set expiry dates on credentials; color-coded badges (green/yellow/red); dashboard alert card for anything expiring within 30 days.
 
 ### 🔑 Credential Vault
 - **Windows Credential Manager** backend: OS-level AES encryption, no master password
@@ -175,8 +180,8 @@ npm run tauri build
 Outputs in `src-tauri/target/release/`:
 ```
 warden.exe                                    <- portable, no install needed
-bundle/nsis/WARDEN_0.5.0_x64-setup.exe       <- NSIS installer
-bundle/msi/WARDEN_0.5.0_x64_en-US.msi        <- MSI package
+bundle/nsis/WARDEN_0.6.0_x64-setup.exe       <- NSIS installer
+bundle/msi/WARDEN_0.6.0_x64_en-US.msi        <- MSI package
 ```
 
 App data is stored in `%APPDATA%\com.warden.app\`. The portable exe is fully self-contained; copy it to any Windows 10/11 machine and run.
@@ -234,7 +239,8 @@ All roles can edit their own username and password via **My Account** (click you
 | **v0.3** | Automation: script library, bulk exec, certificate monitor | ✅ Shipped |
 | **v0.4** | Monitoring: TCP liveness, sparklines, desktop alerts, Ansible export, SSH session panels | ✅ Shipped |
 | **v0.5** | Security: MFA/TOTP, SSH key management | ✅ Shipped |
-| **v0.6** | Multi-user: WARDEN Server, team inventory, group ACLs | 🔄 Planned |
+| **v0.6** | Network visibility: HTTP monitor, subnet scanner, credential expiry | ✅ Shipped |
+| **v0.7** | Multi-user: WARDEN Server, team inventory, group ACLs | 🔄 Planned |
 
 ---
 
